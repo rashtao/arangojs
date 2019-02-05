@@ -47,11 +47,6 @@ arangojs will load balance the request without distinguishing between leaders
 and followers. Note that dirty reads are only supported for read-only queries
 (e.g. not using `INSERT`, `UPDATE`, `REPLACE` or `REMOVE` expressions).
 
-{% hint 'info' %}
-Dirty reads are only available when targeting ArangoDB 3.4 or later,
-see [Compatibility](../../GettingStarted/README.md#compatibility).
-{% endhint %}
-
 Additionally _opts.timeout_ can be set to a non-negative number to force the
 request to be cancelled after that amount of milliseconds. Note that this will
 simply close the connection and not result in the actual query being cancelled

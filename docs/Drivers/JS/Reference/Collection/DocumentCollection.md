@@ -28,11 +28,6 @@ Retrieves the document with the given _documentHandle_ from the collection.
 
   - **allowDirtyRead**: `boolean` (Default: `false`)
 
-    {% hint 'info' %}
-    This option is only available when targeting ArangoDB 3.4 or later,
-    see [Compatibility](../../GettingStarted/README.md#compatibility).
-    {% endhint %}
-
     If set to `true`, the request will explicitly permit ArangoDB to return a
     potentially dirty or stale result and arangojs will load balance the
     request without distinguishing between leaders and followers.
