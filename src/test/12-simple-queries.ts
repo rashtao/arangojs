@@ -1,12 +1,11 @@
 import { expect } from "chai";
 import { Database } from "../arangojs";
-import { DocumentCollection } from "../collection";
+import { Collection } from "../collection";
 import { ArrayCursor } from "../cursor";
 
 const range = (n: number): number[] => Array.from(Array(n).keys());
 const alpha = (i: number): string => String.fromCharCode("a".charCodeAt(0) + i);
 const ARANGO_VERSION = Number(process.env.ARANGO_VERSION || 30400);
-const describe2x = ARANGO_VERSION < 30000 ? describe : describe.skip;
 
 describe("Simple queries", function() {
   // create database takes 11s in a standard cluster
@@ -14,7 +13,7 @@ describe("Simple queries", function() {
 
   let name = `testdb_${Date.now()}`;
   let db: Database;
-  let collection: DocumentCollection;
+  let collection: Collection;
   before(async () => {
     db = new Database({
       url: process.env.TEST_ARANGODB_URL || "http://localhost:8529",
@@ -79,26 +78,6 @@ describe("Simple queries", function() {
       expect(doc._id).to.equal(`${collection.name}/${doc._key}`);
       expect(doc.value).to.be.within(1, 10);
       expect(doc.group).to.equal(Math.floor((doc.value - 1) / 2) + 1);
-    });
-  });
-  describe2x("collection.first", () => {
-    it("returns the first document in the collection", async () => {
-      const doc = await collection.first();
-      expect(doc).to.have.keys("_key", "_id", "_rev", "value", "group");
-      expect(doc._key).to.equal("a");
-      expect(doc._id).to.equal(`${collection.name}/${doc._key}`);
-      expect(doc.value).to.equal(1);
-      expect(doc.group).to.equal(1);
-    });
-  });
-  describe2x("collection.last", () => {
-    it("returns the last document in the collection", async () => {
-      const doc = await collection.last();
-      expect(doc).to.have.keys("_key", "_id", "_rev", "value", "group");
-      expect(doc._key).to.equal(alpha(9));
-      expect(doc._id).to.equal(`${collection.name}/${doc._key}`);
-      expect(doc.value).to.equal(10);
-      expect(doc.group).to.equal(5);
     });
   });
   describe("collection.byExample", () => {

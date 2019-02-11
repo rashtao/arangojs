@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { Database } from "../arangojs";
-import { BaseCollection } from "../collection";
+import { Collection, DocumentCollection } from "../collection";
 import { ArangoError } from "../error";
 import { Graph, GraphVertexCollection } from "../graph";
 
@@ -10,8 +10,10 @@ async function createCollections(db: Database) {
   const vertexCollectionNames = range(2).map(i => `vc_${Date.now()}_${i}`);
   const edgeCollectionNames = range(2).map(i => `ec_${Date.now()}_${i}`);
   await Promise.all([
-    ...vertexCollectionNames.map(name => db.collection(name).create()),
-    ...edgeCollectionNames.map(name => db.edgeCollection(name).create())
+    ...vertexCollectionNames.map(name => db.createCollection(name)),
+    ...edgeCollectionNames.map(
+      name => db.createEdgeCollection(name) as Promise<Collection>
+    )
   ]);
   return [vertexCollectionNames, edgeCollectionNames];
 }
@@ -75,7 +77,7 @@ describe("Manipulating graph vertices", function() {
     });
   });
   describe("graph.addVertexCollection", () => {
-    let vertexCollection: BaseCollection;
+    let vertexCollection: DocumentCollection;
     beforeEach(async () => {
       vertexCollection = db.collection(`xc_${Date.now()}`);
       await vertexCollection.create();
@@ -89,7 +91,7 @@ describe("Manipulating graph vertices", function() {
     });
   });
   describe("graph.removeVertexCollection", () => {
-    let vertexCollection: BaseCollection;
+    let vertexCollection: DocumentCollection;
     beforeEach(async () => {
       vertexCollection = db.collection(`xc_${Date.now()}`);
       await vertexCollection.create();

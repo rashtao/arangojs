@@ -29,7 +29,7 @@ describe("GraphEdgeCollection API", function() {
     collection = graph.edgeCollection("knows");
     await graph
       .vertexCollection("person")
-      .import([
+      .collection.import([
         { _key: "Alice" },
         { _key: "Bob" },
         { _key: "Charlie" },
@@ -46,7 +46,7 @@ describe("GraphEdgeCollection API", function() {
     }
   });
   beforeEach(async () => {
-    await collection.truncate();
+    await collection.collection.truncate();
   });
   describe("edgeCollection.edge", () => {
     const data = { _from: "person/Bob", _to: "person/Alice" };
@@ -68,14 +68,14 @@ describe("GraphEdgeCollection API", function() {
       expect(doc).to.equal(null);
     });
   });
-  describe("edgeCollection.document", () => {
+  describe("edgeCollection.edge", () => {
     const data = { _from: "person/Bob", _to: "person/Alice" };
     let meta: any;
     beforeEach(async () => {
       meta = await collection.save(data);
     });
     it("returns an edge in the collection", async () => {
-      const doc = await collection.document(meta._id);
+      const doc = await collection.edge(meta._id);
       expect(doc).to.have.keys("_key", "_id", "_rev", "_from", "_to");
       expect(doc._id).to.equal(meta._id);
       expect(doc._key).to.equal(meta._key);
@@ -84,7 +84,7 @@ describe("GraphEdgeCollection API", function() {
       expect(doc._to).to.equal(data._to);
     });
     it("does not throw on not found when graceful", async () => {
-      const doc = await collection.document("does-not-exist", true);
+      const doc = await collection.edge("does-not-exist", true);
       expect(doc).to.equal(null);
     });
   });
@@ -134,7 +134,7 @@ describe("GraphEdgeCollection API", function() {
   });
   describe("edgeCollection.traversal", () => {
     beforeEach(async () => {
-      await collection.import([
+      await collection.collection.import([
         { _from: "person/Alice", _to: "person/Bob" },
         { _from: "person/Bob", _to: "person/Charlie" },
         { _from: "person/Bob", _to: "person/Dave" },
@@ -143,7 +143,7 @@ describe("GraphEdgeCollection API", function() {
       ]);
     });
     it("executes traversal", async () => {
-      const result = await collection.traversal("person/Alice", {
+      const result = await collection.collection.traversal("person/Alice", {
         direction: "outbound"
       });
       expect(result).to.have.property("visited");
@@ -164,60 +164,54 @@ describe("GraphEdgeCollection API", function() {
   });
   describe("edgeCollection.replace", () => {
     it("replaces the given edge", async () => {
-      const doc = {
+      const data = {
         potato: "tomato",
         _from: "person/Bob",
         _to: "person/Alice"
       };
-      const meta = await collection.save(doc);
-      delete meta.error;
-      Object.assign(doc, meta);
-      await collection.replace(doc as any, {
+      const { new: doc } = await collection.save(data, { returnNew: true });
+      await collection.replace(doc, {
         sup: "dawg",
         _from: "person/Bob",
         _to: "person/Alice"
       });
-      const data = await collection.edge((doc as any)._key);
-      expect(data).not.to.have.property("potato");
-      expect(data).to.have.property("sup", "dawg");
+      const newData = await collection.edge(doc._key);
+      expect(newData).not.to.have.property("potato");
+      expect(newData).to.have.property("sup", "dawg");
     });
   });
   describe("edgeCollection.update", () => {
     it("updates the given document", async () => {
-      const doc = {
+      const data = {
         potato: "tomato",
         empty: false,
         _from: "person/Bob",
         _to: "person/Alice"
       };
-      const meta = await collection.save(doc);
-      delete meta.error;
-      Object.assign(doc, meta);
-      await collection.update(doc as any, { sup: "dawg", empty: null });
-      const data = await collection.edge((doc as any)._key);
-      expect(data).to.have.property("potato", doc.potato);
-      expect(data).to.have.property("sup", "dawg");
-      expect(data).to.have.property("empty", null);
+      const { new: doc } = await collection.save(data, { returnNew: true });
+      await collection.update(doc, { sup: "dawg", empty: null });
+      const newData = await collection.edge(doc._key);
+      expect(newData).to.have.property("potato", doc.potato);
+      expect(newData).to.have.property("sup", "dawg");
+      expect(newData).to.have.property("empty", null);
     });
     it("removes null values if keepNull is explicitly set to false", async () => {
-      const doc = {
+      const data = {
         potato: "tomato",
         empty: false,
         _from: "person/Bob",
         _to: "person/Alice"
       };
-      const meta = await collection.save(doc);
-      delete meta.error;
-      Object.assign(doc, meta);
+      const { new: doc } = await collection.save(data, { returnNew: true });
       await collection.update(
-        doc as any,
+        doc,
         { sup: "dawg", empty: null },
         { keepNull: false }
       );
-      const data = await collection.edge((doc as any)._key);
-      expect(data).to.have.property("potato", doc.potato);
-      expect(data).to.have.property("sup", "dawg");
-      expect(data).not.to.have.property("empty");
+      const newData = await collection.edge(doc._key);
+      expect(newData).to.have.property("potato", doc.potato);
+      expect(newData).to.have.property("sup", "dawg");
+      expect(newData).not.to.have.property("empty");
     });
   });
   describe("edgeCollection.remove", () => {

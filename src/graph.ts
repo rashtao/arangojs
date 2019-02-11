@@ -1,43 +1,53 @@
 import {
   ArangoCollection,
-  BaseCollection,
-  CollectionType,
-  DocumentHandle,
-  DocumentReadOptions,
+  Collection,
+  DocumentCollection,
+  documentHandle,
   DOCUMENT_NOT_FOUND,
   EdgeCollection,
   isArangoCollection
 } from "./collection";
 import { Connection } from "./connection";
 import { isArangoError } from "./error";
+import { Document, Edge, ReadDocumentOptions, Selector } from "./util/types";
 
-export class GraphVertexCollection extends BaseCollection {
-  type = CollectionType.DOCUMENT_COLLECTION;
+type TODO_any = any;
+
+export class GraphVertexCollection<T extends object = any>
+  implements ArangoCollection {
+  isArangoCollection: true = true;
+  private _connection: Connection;
+  private _name: string;
 
   graph: Graph;
+  collection: DocumentCollection<T>;
 
   constructor(connection: Connection, name: string, graph: Graph) {
-    super(connection, name);
+    this._connection = connection;
+    this._name = name;
     this.graph = graph;
+    this.collection = new Collection(connection, name);
   }
 
-  document(documentHandle: DocumentHandle, graceful: boolean): Promise<any>;
-  document(
-    documentHandle: DocumentHandle,
-    opts?: DocumentReadOptions
-  ): Promise<any>;
-  document(
-    documentHandle: DocumentHandle,
-    opts: boolean | DocumentReadOptions = {}
-  ): Promise<any> {
+  get name() {
+    return this._name;
+  }
+
+  vertex(selector: Selector, opts?: ReadDocumentOptions): Promise<Document<T>>;
+  vertex(selector: Selector, graceful: boolean): Promise<Document<T>>;
+  vertex(
+    selector: Selector,
+    opts?: boolean | ReadDocumentOptions
+  ): Promise<Document<T>> {
     if (typeof opts === "boolean") {
       opts = { graceful: opts };
     }
-    const { allowDirtyRead = undefined, graceful = false } = opts;
+    const { allowDirtyRead = undefined, graceful = false } = opts || {};
     const result = this._connection.request(
       {
-        path: `/_api/gharial/${this.graph.name}/vertex/${this._documentHandle(
-          documentHandle
+        path: `/_api/gharial/${this.graph.name}/vertex/${documentHandle(
+          selector,
+          this._name
         )}`,
         allowDirtyRead
       },
@@ -52,26 +62,14 @@ export class GraphVertexCollection extends BaseCollection {
     });
   }
 
-  vertex(documentHandle: DocumentHandle, graceful: boolean): Promise<any>;
-  vertex(
-    documentHandle: DocumentHandle,
-    opts?: DocumentReadOptions
-  ): Promise<any>;
-  vertex(
-    documentHandle: DocumentHandle,
-    opts: boolean | DocumentReadOptions = {}
-  ): Promise<any> {
-    if (typeof opts === "boolean") {
-      opts = { graceful: opts };
-    }
-    return this.document(documentHandle, opts);
-  }
-
-  save(data: Object | Array<Object>, opts?: { waitForSync?: boolean }) {
+  save(
+    data: TODO_any,
+    opts?: { waitForSync?: boolean; returnNew?: boolean }
+  ): Promise<TODO_any> {
     return this._connection.request(
       {
         method: "POST",
-        path: `/_api/gharial/${this.graph.name}/vertex/${this.name}`,
+        path: `/_api/gharial/${this.graph.name}/vertex/${this._name}`,
         body: data,
         qs: opts
       },
@@ -79,11 +77,7 @@ export class GraphVertexCollection extends BaseCollection {
     );
   }
 
-  replace(
-    documentHandle: DocumentHandle,
-    newValue: Object | Array<Object>,
-    opts: any = {}
-  ) {
+  replace(selector: Selector, newValue: TODO_any, opts: TODO_any = {}) {
     const headers: { [key: string]: string } = {};
     if (typeof opts === "string") {
       opts = { rev: opts };
@@ -96,8 +90,9 @@ export class GraphVertexCollection extends BaseCollection {
     return this._connection.request(
       {
         method: "PUT",
-        path: `/_api/gharial/${this.graph.name}/vertex/${this._documentHandle(
-          documentHandle
+        path: `/_api/gharial/${this.graph.name}/vertex/${documentHandle(
+          selector,
+          this._name
         )}`,
         body: newValue,
         qs: opts,
@@ -107,11 +102,7 @@ export class GraphVertexCollection extends BaseCollection {
     );
   }
 
-  update(
-    documentHandle: DocumentHandle,
-    newValue: Object | Array<Object>,
-    opts: any = {}
-  ) {
+  update(selector: Selector, newValue: TODO_any, opts: TODO_any = {}) {
     const headers: { [key: string]: string } = {};
     if (typeof opts === "string") {
       opts = { rev: opts };
@@ -124,8 +115,9 @@ export class GraphVertexCollection extends BaseCollection {
     return this._connection.request(
       {
         method: "PATCH",
-        path: `/_api/gharial/${this.graph.name}/vertex/${this._documentHandle(
-          documentHandle
+        path: `/_api/gharial/${this.graph.name}/vertex/${documentHandle(
+          selector,
+          this._name
         )}`,
         body: newValue,
         qs: opts,
@@ -135,7 +127,7 @@ export class GraphVertexCollection extends BaseCollection {
     );
   }
 
-  remove(documentHandle: DocumentHandle, opts: any = {}) {
+  remove(selector: Selector, opts: TODO_any = {}) {
     const headers: { [key: string]: string } = {};
     if (typeof opts === "string") {
       opts = { rev: opts };
@@ -148,8 +140,9 @@ export class GraphVertexCollection extends BaseCollection {
     return this._connection.request(
       {
         method: "DELETE",
-        path: `/_api/gharial/${this.graph.name}/vertex/${this._documentHandle(
-          documentHandle
+        path: `/_api/gharial/${this.graph.name}/vertex/${documentHandle(
+          selector,
+          this._name
         )}`,
         qs: opts,
         headers
@@ -159,34 +152,41 @@ export class GraphVertexCollection extends BaseCollection {
   }
 }
 
-export class GraphEdgeCollection extends EdgeCollection {
-  type = CollectionType.EDGE_COLLECTION;
+export class GraphEdgeCollection<T extends object = any>
+  implements ArangoCollection {
+  isArangoCollection: true = true;
+  private _connection: Connection;
+  private _name: string;
 
   graph: Graph;
+  collection: EdgeCollection<T>;
 
   constructor(connection: Connection, name: string, graph: Graph) {
-    super(connection, name);
-    this.type = CollectionType.EDGE_COLLECTION;
+    this._connection = connection;
+    this._name = name;
     this.graph = graph;
+    this.collection = new Collection(connection, name);
   }
 
-  document(documentHandle: DocumentHandle, graceful: boolean): Promise<any>;
-  document(
-    documentHandle: DocumentHandle,
-    opts?: DocumentReadOptions
-  ): Promise<any>;
-  document(
-    documentHandle: DocumentHandle,
-    opts: boolean | DocumentReadOptions = {}
-  ): Promise<any> {
+  get name() {
+    return this._name;
+  }
+
+  edge(selector: Selector, graceful: boolean): Promise<Edge<T>>;
+  edge(selector: Selector, opts?: ReadDocumentOptions): Promise<Edge<T>>;
+  edge(
+    selector: Selector,
+    opts: boolean | ReadDocumentOptions = {}
+  ): Promise<Edge<T>> {
     if (typeof opts === "boolean") {
       opts = { graceful: opts };
     }
     const { allowDirtyRead = undefined, graceful = false } = opts;
     const result = this._connection.request(
       {
-        path: `/_api/gharial/${this.graph.name}/edge/${this._documentHandle(
-          documentHandle
+        path: `/_api/gharial/${this.graph.name}/edge/${documentHandle(
+          selector,
+          this._name
         )}`,
         allowDirtyRead
       },
@@ -202,38 +202,13 @@ export class GraphEdgeCollection extends EdgeCollection {
   }
 
   save(
-    data: Object | Array<Object>,
-    opts?: { waitForSync?: boolean }
-  ): Promise<any>;
-  save(
-    data: Object | Array<Object>,
-    fromId: DocumentHandle,
-    toId: DocumentHandle,
-    opts?: { waitForSync?: boolean }
-  ): Promise<any>;
-  save(
-    data: Object | Array<Object>,
-    fromIdOrOpts?: DocumentHandle | { waitForSync?: boolean },
-    toId?: DocumentHandle,
-    opts?: { waitForSync?: boolean }
-  ) {
-    if (toId !== undefined) {
-      const fromId = this._documentHandle(fromIdOrOpts as DocumentHandle);
-      toId = this._documentHandle(toId);
-      if (Array.isArray(data)) {
-        data = data.map(data => ({ ...data, _from: fromId, _to: toId }));
-      } else {
-        data = { ...data, _from: fromId, _to: toId };
-      }
-    } else {
-      if (fromIdOrOpts !== undefined) {
-        opts = fromIdOrOpts as { waitForSync?: boolean };
-      }
-    }
+    data: TODO_any,
+    opts?: { waitForSync?: boolean; returnNew?: boolean }
+  ): Promise<TODO_any> {
     return this._connection.request(
       {
         method: "POST",
-        path: `/_api/gharial/${this.graph.name}/edge/${this.name}`,
+        path: `/_api/gharial/${this.graph.name}/edge/${this._name}`,
         body: data,
         qs: opts
       },
@@ -241,11 +216,7 @@ export class GraphEdgeCollection extends EdgeCollection {
     );
   }
 
-  replace(
-    documentHandle: DocumentHandle,
-    newValue: Object | Array<Object>,
-    opts: any = {}
-  ) {
+  replace(selector: Selector, newValue: TODO_any, opts: TODO_any = {}) {
     const headers: { [key: string]: string } = {};
     if (typeof opts === "string") {
       opts = { rev: opts };
@@ -258,8 +229,9 @@ export class GraphEdgeCollection extends EdgeCollection {
     return this._connection.request(
       {
         method: "PUT",
-        path: `/_api/gharial/${this.graph.name}/edge/${this._documentHandle(
-          documentHandle
+        path: `/_api/gharial/${this.graph.name}/edge/${documentHandle(
+          selector,
+          this._name
         )}`,
         body: newValue,
         qs: opts,
@@ -269,11 +241,7 @@ export class GraphEdgeCollection extends EdgeCollection {
     );
   }
 
-  update(
-    documentHandle: DocumentHandle,
-    newValue: Object | Array<Object>,
-    opts: any = {}
-  ) {
+  update(selector: Selector, newValue: TODO_any, opts: TODO_any = {}) {
     const headers: { [key: string]: string } = {};
     if (typeof opts === "string") {
       opts = { rev: opts };
@@ -286,8 +254,9 @@ export class GraphEdgeCollection extends EdgeCollection {
     return this._connection.request(
       {
         method: "PATCH",
-        path: `/_api/gharial/${this.graph.name}/edge/${this._documentHandle(
-          documentHandle
+        path: `/_api/gharial/${this.graph.name}/edge/${documentHandle(
+          selector,
+          this._name
         )}`,
         body: newValue,
         qs: opts,
@@ -297,7 +266,7 @@ export class GraphEdgeCollection extends EdgeCollection {
     );
   }
 
-  remove(documentHandle: DocumentHandle, opts: any = {}) {
+  remove(selector: Selector, opts: TODO_any = {}) {
     const headers: { [key: string]: string } = {};
     if (typeof opts === "string") {
       opts = { rev: opts };
@@ -310,8 +279,9 @@ export class GraphEdgeCollection extends EdgeCollection {
     return this._connection.request(
       {
         method: "DELETE",
-        path: `/_api/gharial/${this.graph.name}/edge/${this._documentHandle(
-          documentHandle
+        path: `/_api/gharial/${this.graph.name}/edge/${documentHandle(
+          selector,
+          this._name
         )}`,
         qs: opts,
         headers
@@ -321,20 +291,24 @@ export class GraphEdgeCollection extends EdgeCollection {
   }
 }
 
-const GRAPH_NOT_FOUND = 1924;
+export const GRAPH_NOT_FOUND = 1924;
 export class Graph {
-  name: string;
+  private _name: string;
 
   private _connection: Connection;
 
   constructor(connection: Connection, name: string) {
-    this.name = name;
+    this._name = name;
     this._connection = connection;
+  }
+
+  get name() {
+    return this._name;
   }
 
   get() {
     return this._connection.request(
-      { path: `/_api/gharial/${this.name}` },
+      { path: `/_api/gharial/${this._name}` },
       res => res.body.graph
     );
   }
@@ -351,14 +325,14 @@ export class Graph {
     );
   }
 
-  create(properties: any = {}, opts?: { waitForSync?: boolean }) {
+  create(properties: TODO_any, opts?: { waitForSync?: boolean }) {
     return this._connection.request(
       {
         method: "POST",
         path: "/_api/gharial",
         body: {
           ...properties,
-          name: this.name
+          name: this._name
         },
         qs: opts
       },
@@ -370,20 +344,20 @@ export class Graph {
     return this._connection.request(
       {
         method: "DELETE",
-        path: `/_api/gharial/${this.name}`,
+        path: `/_api/gharial/${this._name}`,
         qs: { dropCollections }
       },
       res => res.body.removed
     );
   }
 
-  vertexCollection(collectionName: string) {
-    return new GraphVertexCollection(this._connection, collectionName, this);
+  vertexCollection<T extends object = any>(collectionName: string) {
+    return new GraphVertexCollection<T>(this._connection, collectionName, this);
   }
 
   listVertexCollections(opts?: { excludeOrphans?: boolean }) {
     return this._connection.request(
-      { path: `/_api/gharial/${this.name}/vertex`, qs: opts },
+      { path: `/_api/gharial/${this._name}/vertex`, qs: opts },
       res => res.body.collections
     );
   }
@@ -391,7 +365,8 @@ export class Graph {
   async vertexCollections(opts?: { excludeOrphans?: boolean }) {
     const names = await this.listVertexCollections(opts);
     return names.map(
-      (name: any) => new GraphVertexCollection(this._connection, name, this)
+      (name: TODO_any) =>
+        new GraphVertexCollection(this._connection, name, this)
     );
   }
 
@@ -402,7 +377,7 @@ export class Graph {
     return this._connection.request(
       {
         method: "POST",
-        path: `/_api/gharial/${this.name}/vertex`,
+        path: `/_api/gharial/${this._name}/vertex`,
         body: { collection }
       },
       res => res.body.graph
@@ -419,7 +394,7 @@ export class Graph {
     return this._connection.request(
       {
         method: "DELETE",
-        path: `/_api/gharial/${this.name}/vertex/${collection}`,
+        path: `/_api/gharial/${this._name}/vertex/${collection}`,
         qs: {
           dropCollection
         }
@@ -428,13 +403,13 @@ export class Graph {
     );
   }
 
-  edgeCollection(collectionName: string) {
-    return new GraphEdgeCollection(this._connection, collectionName, this);
+  edgeCollection<T extends object = any>(collectionName: string) {
+    return new GraphEdgeCollection<T>(this._connection, collectionName, this);
   }
 
   listEdgeCollections() {
     return this._connection.request(
-      { path: `/_api/gharial/${this.name}/edge` },
+      { path: `/_api/gharial/${this._name}/edge` },
       res => res.body.collections
     );
   }
@@ -442,26 +417,26 @@ export class Graph {
   async edgeCollections() {
     const names = await this.listEdgeCollections();
     return names.map(
-      (name: any) => new GraphEdgeCollection(this._connection, name, this)
+      (name: TODO_any) => new GraphEdgeCollection(this._connection, name, this)
     );
   }
 
-  addEdgeDefinition(definition: any) {
+  addEdgeDefinition(definition: TODO_any) {
     return this._connection.request(
       {
         method: "POST",
-        path: `/_api/gharial/${this.name}/edge`,
+        path: `/_api/gharial/${this._name}/edge`,
         body: definition
       },
       res => res.body.graph
     );
   }
 
-  replaceEdgeDefinition(definitionName: string, definition: any) {
+  replaceEdgeDefinition(definitionName: string, definition: TODO_any) {
     return this._connection.request(
       {
         method: "PUT",
-        path: `/_api/gharial/${this.name}/edge/${definitionName}`,
+        path: `/_api/gharial/${this._name}/edge/${definitionName}`,
         body: definition
       },
       res => res.body.graph
@@ -475,7 +450,7 @@ export class Graph {
     return this._connection.request(
       {
         method: "DELETE",
-        path: `/_api/gharial/${this.name}/edge/${definitionName}`,
+        path: `/_api/gharial/${this._name}/edge/${definitionName}`,
         qs: {
           dropCollection
         }
@@ -484,7 +459,7 @@ export class Graph {
     );
   }
 
-  traversal(startVertex: DocumentHandle, opts: any) {
+  traversal(startVertex: Selector, opts: TODO_any) {
     return this._connection.request(
       {
         method: "POST",
@@ -492,7 +467,7 @@ export class Graph {
         body: {
           ...opts,
           startVertex,
-          graphName: this.name
+          graphName: this._name
         }
       },
       res => res.body.result

@@ -1,11 +1,11 @@
 import { Connection } from "./connection";
 
-export class ArrayCursor {
+export class ArrayCursor<T = any> {
   extra: any;
   count: number;
 
   private _connection: Connection;
-  private _result: any;
+  private _result: T[];
   private _hasMore: boolean;
   private _id: string;
   private _host?: number;
@@ -13,7 +13,13 @@ export class ArrayCursor {
 
   constructor(
     connection: Connection,
-    body: any,
+    body: {
+      extra: any;
+      result: T[];
+      hasMore: boolean;
+      id: string;
+      count: number;
+    },
     host?: number,
     allowDirtyRead?: boolean
   ) {
@@ -27,34 +33,32 @@ export class ArrayCursor {
     this._allowDirtyRead = allowDirtyRead;
   }
 
-  private async _drain(): Promise<ArrayCursor> {
+  private async _drain(): Promise<ArrayCursor<T>> {
     await this._more();
     if (!this._hasMore) return this;
     return this._drain();
   }
 
-  private async _more() {
+  private async _more(): Promise<void> {
     if (!this._hasMore) return;
-    else {
-      const res = await this._connection.request({
-        method: "PUT",
-        path: `/_api/cursor/${this._id}`,
-        host: this._host,
-        allowDirtyRead: this._allowDirtyRead
-      });
-      this._result.push(...res.body.result);
-      this._hasMore = res.body.hasMore;
-    }
+    const res = await this._connection.request({
+      method: "PUT",
+      path: `/_api/cursor/${this._id}`,
+      host: this._host,
+      allowDirtyRead: this._allowDirtyRead
+    });
+    this._result.push(...res.body.result);
+    this._hasMore = res.body.hasMore;
   }
 
-  async all() {
+  async all(): Promise<T[]> {
     await this._drain();
     let result = this._result;
     this._result = [];
     return result;
   }
 
-  async next(): Promise<any | undefined> {
+  async next(): Promise<T | undefined> {
     while (!this._result.length && this._hasMore) {
       await this._more();
     }
@@ -64,18 +68,18 @@ export class ArrayCursor {
     return this._result.shift();
   }
 
-  hasNext() {
+  hasNext(): boolean {
     return Boolean(this._hasMore || this._result.length);
   }
 
   async each(
-    fn: (value: any, index: number, self: ArrayCursor) => boolean | void
+    fn: (value: T, index: number, self: ArrayCursor<T>) => boolean | void
   ): Promise<boolean> {
     let index = 0;
     while (this._result.length || this._hasMore) {
       let result;
       while (this._result.length) {
-        result = fn(this._result.shift(), index, this);
+        result = fn(this._result.shift()!, index, this);
         index++;
         if (result === false) return result;
       }
@@ -85,13 +89,13 @@ export class ArrayCursor {
   }
 
   async every(
-    fn: (value: any, index: number, self: ArrayCursor) => boolean
+    fn: (value: T, index: number, self: ArrayCursor<T>) => boolean
   ): Promise<boolean> {
     let index = 0;
     while (this._result.length || this._hasMore) {
       let result;
       while (this._result.length) {
-        result = fn(this._result.shift(), index, this);
+        result = fn(this._result.shift()!, index, this);
         index++;
         if (!result) return false;
       }
@@ -101,13 +105,13 @@ export class ArrayCursor {
   }
 
   async some(
-    fn: (value: any, index: number, self: ArrayCursor) => boolean
+    fn: (value: T, index: number, self: ArrayCursor<T>) => boolean
   ): Promise<boolean> {
     let index = 0;
     while (this._result.length || this._hasMore) {
       let result;
       while (this._result.length) {
-        result = fn(this._result.shift(), index, this);
+        result = fn(this._result.shift()!, index, this);
         index++;
         if (result) return true;
       }
@@ -116,14 +120,14 @@ export class ArrayCursor {
     return false;
   }
 
-  async map<T>(
-    fn: (value: any, index: number, self: ArrayCursor) => T
-  ): Promise<T[]> {
+  async map<U = any>(
+    fn: (value: T, index: number, self: ArrayCursor<T>) => U
+  ): Promise<U[]> {
     let index = 0;
     let result: any[] = [];
     while (this._result.length || this._hasMore) {
       while (this._result.length) {
-        result.push(fn(this._result.shift(), index, this));
+        result.push(fn(this._result.shift()!, index, this));
         index++;
       }
       if (this._hasMore) await this._more();
@@ -131,21 +135,22 @@ export class ArrayCursor {
     return result;
   }
 
-  async reduce<T>(
-    fn: (accu: T, value: any, index: number, self: ArrayCursor) => T,
-    accu?: T
-  ): Promise<T | undefined> {
+  async reduce<U>(
+    fn: (accu: U, value: T, index: number, self: ArrayCursor<T>) => U,
+    accu?: U
+  ): Promise<U | undefined> {
     let index = 0;
+    if (!this._result.length) return accu;
     if (accu === undefined) {
       if (!this._result.length && !this._hasMore) {
         await this._more();
       }
-      accu = this._result.shift();
+      accu = this._result.shift() as any;
       index += 1;
     }
     while (this._result.length || this._hasMore) {
       while (this._result.length) {
-        accu = fn(accu!, this._result.shift(), index, this);
+        accu = fn(accu!, this._result.shift()!, index, this);
         index++;
       }
       if (this._hasMore) await this._more();

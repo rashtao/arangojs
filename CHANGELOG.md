@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Removed
+
+- Removed ArangoDB 2.8 compatibility
+
+  ArangoDB 2.8 has reached End of Life since mid 2018. Version 7 and above
+  of arangojs will no longer support ArangoDB 2.8 and earlier.
+
+- Removed generic collection methods from `GraphVertexCollection`
+
+  All methods that are not part of the graph API have been removed.
+  The underlying collection can still be accessed from the `collection`
+  property.
+
+- Removed generic collection methods from `GraphEdgeCollection`
+
+  All methods that are not part of the graph API have been removed.
+  The underlying collection can still be accessed from the `collection`
+  property.
+
+### Changed
+
+- Renamed `createSkipListIndex` to `createSkiplistIndex`
+
+- Simplified `DocumentCollection` and `EdgeCollection` APIs
+
+  All collections are now simply `Collection` objects. In TypeScript the
+  generic collection object can still be explicitly cast to
+  `DocumentCollection` or `EdgeCollection` for additional stricter type safety.
+
+### Added
+
+- Improved type signatures for TypeScript
+
+  Most methods should now provide full type signatures for options and response
+  objects.
+
 ## [6.10.0] - 2018-12-22
 
 ### Changed

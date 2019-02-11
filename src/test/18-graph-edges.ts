@@ -150,14 +150,14 @@ describe("Manipulating graph edges", function() {
       const knows = graph.edgeCollection("knows");
       const person = graph.vertexCollection("person");
       await Promise.all([
-        person.import([
+        person.collection.import([
           { _key: "Alice" },
           { _key: "Bob" },
           { _key: "Charlie" },
           { _key: "Dave" },
           { _key: "Eve" }
         ]),
-        knows.import([
+        knows.collection.import([
           { _from: "person/Alice", _to: "person/Bob" },
           { _from: "person/Bob", _to: "person/Charlie" },
           { _from: "person/Bob", _to: "person/Dave" },

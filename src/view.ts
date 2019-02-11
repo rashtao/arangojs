@@ -1,6 +1,8 @@
 import { Connection } from "./connection";
 import { isArangoError } from "./error";
 
+type TODO_any = any;
+
 export enum ViewType {
   ARANGOSEARCH_VIEW = "arangosearch"
 }
@@ -183,7 +185,10 @@ export class ArangoSearchView extends BaseView {
   }
 }
 
-export function constructView(connection: Connection, data: any): ArangoView {
+export function constructView(
+  connection: Connection,
+  data: TODO_any
+): ArangoView {
   if (data.type && data.type !== ViewType.ARANGOSEARCH_VIEW) {
     throw new Error(`Unknown view type "${data.type}"`);
   }

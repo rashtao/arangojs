@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { Database } from "../arangojs";
-import { DocumentCollection } from "../collection";
+import { Collection } from "../collection";
 
 const ARANGO_VERSION = Number(process.env.ARANGO_VERSION || 30400);
 const itPre34 = ARANGO_VERSION < 30400 ? it : it.skip;
@@ -11,7 +11,7 @@ describe("Managing indexes", function() {
   this.timeout(20000);
 
   let db: Database;
-  let collection: DocumentCollection;
+  let collection: Collection;
   const dbName = `testdb_${Date.now()}`;
   const collectionName = `collection-${Date.now()}`;
   before(async () => {
@@ -55,9 +55,9 @@ describe("Managing indexes", function() {
       expect(info).to.have.property("isNewlyCreated", true);
     });
   });
-  describe("collection.createSkipList", () => {
+  describe("collection.createSkiplist", () => {
     it("should create a skiplist index", async () => {
-      const info = await collection.createSkipList(["value"]);
+      const info = await collection.createSkiplist(["value"]);
       expect(info).to.have.property("id");
       expect(info).to.have.property("type", "skiplist");
       expect(info).to.have.property("fields");

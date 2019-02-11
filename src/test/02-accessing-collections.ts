@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { Database } from "../arangojs";
-import { DocumentCollection, EdgeCollection } from "../collection";
+import { Collection } from "../collection";
 
 const range = (n: number): number[] => Array.from(Array(n).keys());
 
@@ -33,17 +33,7 @@ describe("Accessing collections", function() {
     it("returns a DocumentCollection instance for the collection", () => {
       const name = "potato";
       const collection = db.collection(name);
-      expect(collection).to.be.an.instanceof(DocumentCollection);
-      expect(collection)
-        .to.have.property("name")
-        .that.equals(name);
-    });
-  });
-  describe("database.edgeCollection", () => {
-    it("returns an EdgeCollection instance for the collection", () => {
-      const name = "tomato";
-      const collection = db.edgeCollection(name);
-      expect(collection).to.be.an.instanceof(EdgeCollection);
+      expect(collection).to.be.an.instanceof(Collection);
       expect(collection)
         .to.have.property("name")
         .that.equals(name);
@@ -54,7 +44,7 @@ describe("Accessing collections", function() {
     const systemCollectionNames = range(4).map(i => `_c_${Date.now()}_${i}`);
     before(async () => {
       await Promise.all([
-        ...nonSystemCollectionNames.map(name => db.collection(name).create()),
+        ...nonSystemCollectionNames.map(name => db.createCollection(name)),
         ...systemCollectionNames.map(name =>
           db.collection(name).create({ isSystem: true })
         )
@@ -93,8 +83,10 @@ describe("Accessing collections", function() {
     const systemCollectionNames = range(4).map(i => `_c_${Date.now()}_${i}`);
     before(async () => {
       await Promise.all([
-        ...documentCollectionNames.map(name => db.collection(name).create()),
-        ...edgeCollectionNames.map(name => db.edgeCollection(name).create()),
+        ...documentCollectionNames.map(name => db.createCollection(name)),
+        ...edgeCollectionNames.map(
+          name => db.createEdgeCollection(name) as Promise<Collection>
+        ),
         ...systemCollectionNames.map(name =>
           db.collection(name).create({ isSystem: true })
         )
@@ -103,52 +95,31 @@ describe("Accessing collections", function() {
     after(async () => {
       await Promise.all([
         ...documentCollectionNames.map(name => db.collection(name).drop()),
-        ...edgeCollectionNames.map(name => db.edgeCollection(name).drop()),
+        ...edgeCollectionNames.map(name => db.collection(name).drop()),
         ...systemCollectionNames.map(name =>
           db.collection(name).drop({ isSystem: true })
         )
       ]);
     });
-    it("creates DocumentCollection and EdgeCollection instances", async () => {
+    it("creates Collection instances", async () => {
       const collections = await db.collections();
-      const documentCollections = collections
-        .filter((c: any) => c instanceof DocumentCollection)
-        .sort();
-      const edgeCollections = collections
-        .filter((c: any) => c instanceof EdgeCollection)
-        .sort();
-      expect(documentCollections.length).to.equal(
-        documentCollectionNames.length
+      expect(collections.length).to.equal(
+        documentCollectionNames.length + edgeCollectionNames.length
       );
-      expect(documentCollections.map((c: any) => c.name).sort()).to.eql(
-        documentCollectionNames
-      );
-      expect(edgeCollections.length).to.equal(edgeCollectionNames.length);
-      expect(edgeCollections.map((c: any) => c.name).sort()).to.eql(
-        edgeCollectionNames
+      expect(collections.map(c => c.name).sort()).to.eql(
+        [...documentCollectionNames, ...edgeCollectionNames].sort()
       );
     });
     it("includes system collections if explicitly passed false", async () => {
       const collections = await db.collections(false);
-      const documentCollections = collections.filter(
-        (c: any) => c instanceof DocumentCollection
-      );
-      const edgeCollections = collections.filter(
-        (c: any) => c instanceof EdgeCollection
-      );
-      const allDocumentCollectionNames = documentCollectionNames
-        .concat(systemCollectionNames)
-        .concat(builtinSystemCollections)
-        .sort();
-      expect(documentCollections.length).to.be.at.least(
-        allDocumentCollectionNames.length
-      );
-      expect(documentCollections.map((c: any) => c.name).sort()).to.eql(
-        allDocumentCollectionNames
-      );
-      expect(edgeCollections.length).to.be.at.least(edgeCollectionNames.length);
-      expect(edgeCollections.map((c: any) => c.name).sort()).to.eql(
-        edgeCollectionNames
+      const allCollectionNames = [
+        ...documentCollectionNames,
+        ...edgeCollectionNames,
+        ...systemCollectionNames,
+        ...builtinSystemCollections
+      ].sort();
+      expect(collections.map((c: any) => c.name).sort()).to.eql(
+        allCollectionNames
       );
     });
   });

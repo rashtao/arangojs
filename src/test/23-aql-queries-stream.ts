@@ -74,9 +74,9 @@ describe34("AQL Stream queries", function() {
       let collection = db.collection(cname);
       await collection.create();
       await Promise.all(
-        Array.from(Array(1000).keys())
-          .map(i => Number(i))
-          .map((i: number) => collection.save({ hallo: i }))
+        Array.from(Array(1000).keys()).map((i: number) =>
+          collection.save({ hallo: i })
+        )
       );
     });
     /*after(async () => {

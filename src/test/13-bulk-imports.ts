@@ -1,6 +1,7 @@
 import { expect } from "chai";
 import { Database } from "../arangojs";
-import { DocumentCollection, ImportOptions } from "../collection";
+import { Collection } from "../collection";
+import { ImportOptions } from "../util/types";
 
 describe("Bulk imports", function() {
   // create database takes 11s in a standard cluster
@@ -8,7 +9,7 @@ describe("Bulk imports", function() {
 
   let db: Database;
   let dbName = `testdb_${Date.now()}`;
-  let collection: DocumentCollection;
+  let collection: Collection<{ data: string }>;
   let collectionName = `collection-${Date.now()}`;
   before(async () => {
     db = new Database({
