@@ -1,7 +1,5 @@
 import { expect } from "chai";
-import { Database } from "../arangojs";
-import { Collection } from "../collection";
-import { ArrayCursor } from "../cursor";
+import { ArrayCursor, Database, DocumentCollection } from "../arangojs";
 
 const range = (n: number): number[] => Array.from(Array(n).keys());
 const alpha = (i: number): string => String.fromCharCode("a".charCodeAt(0) + i);
@@ -13,7 +11,7 @@ describe("Simple queries", function() {
 
   let name = `testdb_${Date.now()}`;
   let db: Database;
-  let collection: Collection;
+  let collection: DocumentCollection;
   before(async () => {
     db = new Database({
       url: process.env.TEST_ARANGODB_URL || "http://localhost:8529",

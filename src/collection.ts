@@ -1,49 +1,8 @@
 import { Connection } from "./connection";
 import { ArrayCursor } from "./cursor";
 import { isArangoError } from "./error";
-import {
-  ArangoResponseMetadata,
-  CollectionChecksumOptions,
-  CollectionFigures,
-  CollectionMetadata,
-  CollectionProperties,
-  CollectionPropertiesOptions,
-  CollectionType,
-  CreateCollectionOptions,
-  CreateFulltextIndexOptions,
-  CreateGeoIndexOptions,
-  CreateHashIndexOptions,
-  CreateIndexOptions,
-  CreatePersistentIndexOptions,
-  CreateSkiplistIndexOptions,
-  Document,
-  DocumentData,
-  DocumentLike,
-  DocumentMetadata,
-  Edge,
-  EdgeData,
-  EdgesResult,
-  ImportOptions,
-  ImportResult,
-  Index,
-  IndexHandle,
-  InsertDocumentOptions,
-  Patch,
-  ReadDocumentOptions,
-  RemoveDocumentOptions,
-  ReplaceDocumentOptions,
-  Selector,
-  SimpleQueryAllKeysType,
-  SimpleQueryAllOptions,
-  SimpleQueryFulltextOptions,
-  SimpleQueryOptions,
-  SimpleQueryRemoveByKeysOptions,
-  SimpleQueryRemoveByKeysResult,
-  SimpleQueryRemoveOrReplaceByExampleOptions,
-  SimpleQueryUpdateByExampleOptions,
-  TraversalOptions,
-  UpdateDocumentOptions
-} from "./util/types";
+import { COLLECTION_NOT_FOUND, DOCUMENT_NOT_FOUND } from "./util/codes";
+import { ArangoResponseMetadata, Patch, StrictObject } from "./util/types";
 
 export function documentHandle(
   selector: Selector,
@@ -77,95 +36,585 @@ export interface ArangoCollection {
   name: string;
 }
 
-export const DOCUMENT_NOT_FOUND = 1202;
-export const COLLECTION_NOT_FOUND = 1203;
+export enum CollectionType {
+  DOCUMENT_COLLECTION = 2,
+  EDGE_COLLECTION = 3
+}
+
+export enum CollectionStatus {
+  NEWBORN = 1,
+  UNLOADED = 2,
+  LOADED = 3,
+  UNLOADING = 4,
+  DELETED = 5,
+  LOADING = 6
+}
+
+export type KeyGenerator = "traditional" | "autoincrement" | "uuid" | "padded";
+
+export type ShardingStrategy =
+  | "hash"
+  | "enterprise-hash-smart-edge"
+  | "community-compat"
+  | "enterprise-compat"
+  | "enterprise-smart-edge-compat";
+
+/** @deprecated ArangoDB 3.4 */
+export type SimpleQueryAllKeys = "id" | "key" | "path";
+
+export interface CollectionMetadata {
+  status: CollectionStatus;
+  name: string;
+  type: CollectionType;
+  isSystem: boolean;
+}
+
+export interface CollectionProperties extends CollectionMetadata {
+  statusString: string;
+  waitForSync: boolean;
+  keyOptions: {
+    allowUserKeys: boolean;
+    type: KeyGenerator;
+    lastValue: number;
+  };
+
+  cacheEnabled?: boolean;
+  doCompact?: boolean;
+  journalSize?: number;
+  indexBuckets?: number;
+
+  numberOfShards?: number;
+  shardKeys?: string[];
+  replicationFactor?: number;
+  shardingStrategy?: ShardingStrategy;
+}
+
+// Options
+
+export interface CollectionPropertiesOptions {
+  waitForSync?: boolean;
+  journalSize?: number;
+  indexBuckets?: number;
+  replicationFactor?: number;
+}
+
+export interface CollectionChecksumOptions {
+  withRevisions?: boolean;
+  withData?: boolean;
+}
+
+export interface CollectionDropOptions {
+  isSystem?: boolean;
+}
+
+export interface CreateCollectionOptions {
+  waitForSync?: boolean;
+  journalSize?: number;
+  isVolatile?: boolean;
+  isSystem?: boolean;
+  keyOptions?: {
+    type?: KeyGenerator;
+    allowUserKeys?: boolean;
+    increment?: number;
+    offset?: number;
+  };
+  numberOfShards?: number;
+  shardKeys?: string[];
+  replicationFactor?: number;
+}
+
+export interface CollectionCreateOptions extends CreateCollectionOptions {
+  type?: CollectionType;
+}
+
+export interface CollectionReadOptions {
+  graceful?: boolean;
+  allowDirtyRead?: boolean;
+}
+
+export interface CollectionSaveOptions {
+  waitForSync?: boolean;
+  silent?: boolean;
+  returnNew?: boolean;
+}
+
+export interface CollectionReplaceOptions extends CollectionSaveOptions {
+  overwrite?: boolean;
+  returnOld?: boolean;
+}
+
+export interface CollectionUpdateOptions extends CollectionReplaceOptions {
+  keepNull?: boolean;
+  mergeObjects?: boolean;
+}
+
+export interface CollectionRemoveOptions {
+  waitForSync?: boolean;
+  overwrite?: boolean;
+  returnOld?: boolean;
+  silent?: boolean;
+}
+
+export interface CollectionImportOptions {
+  type?: null | "auto" | "documents" | "array";
+  fromPrefix?: string;
+  toPrefix?: string;
+  overwrite?: boolean;
+  waitForSync?: boolean;
+  onDuplicate?: "error" | "update" | "replace" | "ignore";
+  complete?: boolean;
+  details?: boolean;
+}
+
+/** @deprecated ArangoDB 3.4 */
+export interface SimpleQueryByExampleOptions {
+  skip?: number;
+  limit?: number;
+  batchSize?: number;
+  ttl?: number;
+}
+
+/** @deprecated ArangoDB 3.4 */
+export interface SimpleQueryAllOptions extends SimpleQueryByExampleOptions {
+  stream?: boolean;
+}
+
+/** @deprecated ArangoDB 3.4 */
+export interface SimpleQueryUpdateByExampleOptions {
+  keepNull?: boolean;
+  waitForSync?: boolean;
+  limit?: number;
+  mergeObjects?: boolean;
+}
+
+/** @deprecated ArangoDB 3.4 */
+export interface SimpleQueryRemoveByExampleOptions {
+  waitForSync?: boolean;
+  limit?: number;
+}
+
+/** @deprecated ArangoDB 3.4 */
+export type SimpleQueryReplaceByExampleOptions = SimpleQueryRemoveByExampleOptions;
+
+/** @deprecated ArangoDB 3.4 */
+export interface SimpleQueryRemoveByKeysOptions {
+  returnOld?: boolean;
+  silent?: boolean;
+  waitForSync?: boolean;
+}
+
+/** @deprecated ArangoDB 3.4 */
+export interface SimpleQueryFulltextOptions {
+  index?: string;
+  limit?: number;
+  skip?: number;
+}
+
+/** @deprecated ArangoDB 3.4 */
+export interface TraversalOptions {
+  graphName?: string;
+  edgeCollection?: string;
+  init?: string;
+  filter?: string;
+  sort?: string;
+  visitor?: string;
+  expander?: string;
+  direction?: "inbound" | "outbound" | "any";
+  itemOrder?: "forward" | "backward";
+  strategy?: "depthfirst" | "breadthfirst";
+  order?: "preorder" | "postorder" | "preorder-expander";
+  uniqueness?: {
+    vertices?: "none" | "global" | "path";
+    edges?: "none" | "global" | "path";
+  };
+  minDepth?: number;
+  maxDepth?: number;
+  maxIterations?: number;
+}
+
+export interface CreateHashIndexOptions {
+  unique?: boolean;
+  sparse?: boolean;
+  deduplicate?: boolean;
+}
+
+export type CreateSkiplistIndexOptions = CreateHashIndexOptions;
+
+export interface CreatePersistentIndexOptions {
+  unique?: boolean;
+  sparse?: boolean;
+}
+
+export interface CreateGeoIndexOptions {
+  geoJson?: boolean;
+}
+
+export interface CreateFulltextIndexOptions {
+  minLength?: number;
+}
+
+export interface CreateIndexHashOptions extends CreateHashIndexOptions {
+  type: "hash";
+  fields: string[];
+}
+
+export interface CreateIndexSkiplistOptions extends CreateSkiplistIndexOptions {
+  type: "skiplist";
+  fields: string[];
+}
+
+export interface CreateIndexPersistentOptions
+  extends CreatePersistentIndexOptions {
+  type: "persistent";
+  fields: string[];
+}
+
+export interface CreateIndexGeoOptions extends CreateGeoIndexOptions {
+  type: "geo";
+  fields: [string] | [string, string];
+}
+
+export interface CreateIndexFulltextOptions extends CreateFulltextIndexOptions {
+  type: "fulltext";
+  fields: string[];
+}
+
+export type CreateIndexOptions =
+  | CreateIndexHashOptions
+  | CreateIndexSkiplistOptions
+  | CreateIndexPersistentOptions
+  | CreateIndexGeoOptions
+  | CreateIndexFulltextOptions;
+
+// Results
+
+export interface CollectionCountResult extends CollectionProperties {
+  count: number;
+}
+
+export interface CollectionFiguresResult extends CollectionProperties {
+  count: number;
+  figures: {
+    alive: {
+      count: number;
+      size: number;
+    };
+    dead: {
+      count: number;
+      size: number;
+      deletion: number;
+    };
+    datafiles: {
+      count: number;
+      fileSize: number;
+    };
+    journals: {
+      count: number;
+      fileSize: number;
+    };
+    compactors: {
+      count: number;
+      fileSize: number;
+    };
+    shapefiles: {
+      count: number;
+      fileSize: number;
+    };
+    shapes: {
+      count: number;
+      size: number;
+    };
+    attributes: {
+      count: number;
+      size: number;
+    };
+    indexes: {
+      count: number;
+      size: number;
+    };
+    lastTick: number;
+    uncollectedLogfileEntries: number;
+    documentReferences: number;
+    waitingFor: string;
+    compactionStatus: {
+      time: string;
+      message: string;
+      count: number;
+      filesCombined: number;
+      bytesRead: number;
+      bytesWritten: number;
+    };
+  };
+}
+
+export interface CollectionRevisionResult extends CollectionProperties {
+  revision: string;
+}
+
+export interface CollectionChecksumResult {
+  revision: string;
+  checksum: string;
+}
+
+export interface CollectionLoadResult extends CollectionMetadata {
+  count?: number;
+}
+
+export interface CollectionRenameResult extends CollectionMetadata {
+  name: string;
+}
+
+export interface CollectionRotateResult {
+  result: boolean;
+}
+
+export interface CollectionImportResult {
+  error: false;
+  created: number;
+  errors: number;
+  empty: number;
+  updated: number;
+  ignored: number;
+  details?: string[];
+}
+
+export interface CollectionEdgesResult<T extends object = any> {
+  edges: Document<T>[];
+  stats: {
+    scannedIndex: number;
+    filtered: number;
+  };
+}
+
+export interface SaveDocumentResult<T extends object = any>
+  extends DocumentMetadata {
+  new?: Document<T>;
+}
+
+export interface UpdateDocumentResult<T extends object = any>
+  extends DocumentMetadata {
+  new?: Document<T>;
+  old?: Document<T>;
+}
+
+export type ReplaceDocumentResult<
+  T extends object = any
+> = UpdateDocumentResult<T>;
+
+export interface RemoveDocumentResult<T extends object = any>
+  extends DocumentMetadata {
+  old?: Document<T>;
+}
+
+export interface SaveEdgeResult<T extends object = any>
+  extends DocumentMetadata {
+  new?: Edge<T>;
+}
+
+export interface UpdateEdgeResult<T extends object = any>
+  extends DocumentMetadata {
+  new?: Edge<T>;
+  old?: Edge<T>;
+}
+
+export type ReplaceEdgeResult<T extends object = any> = UpdateEdgeResult<T>;
+
+export interface RemoveEdgeResult<T extends object = any>
+  extends DocumentMetadata {
+  old?: Edge<T>;
+}
+
+/** @deprecated ArangoDB 3.4 */
+export interface SimpleQueryRemoveByKeysResult<T extends object = any> {
+  removed: number;
+  ignored: number;
+  old?: DocumentMetadata[] | Document<T>[];
+}
+
+// Document
+
+export interface ObjectWithId {
+  [key: string]: any;
+  _id: string;
+}
+
+export interface ObjectWithKey {
+  [key: string]: any;
+  _id: string;
+}
+
+export type DocumentLike = ObjectWithId | ObjectWithKey;
+
+export type Selector = DocumentLike | string;
+
+export interface DocumentMetadata {
+  _key: string;
+  _id: string;
+  _rev: string;
+}
+
+export interface UpdateMetadata extends DocumentMetadata {
+  _oldRev: string;
+}
+
+export interface EdgeMetadata {
+  _from: string;
+  _to: string;
+}
+
+export type DocumentData<T extends object = any> = StrictObject<T> &
+  Partial<DocumentMetadata> &
+  Partial<EdgeMetadata>;
+
+export type EdgeData<T extends object = any> = StrictObject<T> &
+  Partial<DocumentMetadata> &
+  EdgeMetadata;
+
+export type Document<T extends object = any> = StrictObject<T> &
+  DocumentMetadata &
+  Partial<EdgeMetadata>;
+
+export type Edge<T extends object = any> = StrictObject<T> &
+  DocumentMetadata &
+  EdgeMetadata;
+
+// Indexes
+
+export interface GenericIndex {
+  fields: string[];
+  id: string;
+  sparse: boolean;
+  unique: boolean;
+}
+
+export interface SkiplistIndex extends GenericIndex {
+  type: "skiplist";
+}
+
+export interface HashIndex extends GenericIndex {
+  type: "hash";
+  selectivityEstimate: number;
+}
+
+export interface PrimaryIndex extends GenericIndex {
+  type: "primary";
+  selectivityEstimate: number;
+}
+
+export interface PersistentIndex extends GenericIndex {
+  type: "persistent";
+}
+
+export interface FulltextIndex extends GenericIndex {
+  type: "fulltext";
+  minLength: number;
+}
+
+export interface GeoIndex extends GenericIndex {
+  fields: [string] | [string, string];
+  type: "geo";
+  geoJson: boolean;
+  bestIndexedLevel: number;
+  worstIndexedLevel: number;
+  maxNumCoverCells: number;
+}
+
+export type Index =
+  | GeoIndex
+  | FulltextIndex
+  | PersistentIndex
+  | PrimaryIndex
+  | HashIndex
+  | SkiplistIndex;
+
+export type IndexHandle = string | Index;
+
+// Collections
 
 export interface DocumentCollection<T extends object = any>
   extends ArangoCollection {
   get(): Promise<ArangoResponseMetadata & CollectionMetadata>;
   exists(): Promise<boolean>;
   create(
-    properties?: CreateCollectionOptions
+    properties?: CollectionCreateOptions
   ): Promise<ArangoResponseMetadata & CollectionProperties>;
   properties(): Promise<ArangoResponseMetadata & CollectionProperties>;
   properties(
     properties: CollectionPropertiesOptions
   ): Promise<ArangoResponseMetadata & CollectionProperties>;
-  count(): Promise<
-    ArangoResponseMetadata & CollectionProperties & { count: number }
-  >;
-  figures(): Promise<
-    ArangoResponseMetadata &
-      CollectionProperties & { count: number; figures: CollectionFigures }
-  >;
-  revision(): Promise<
-    ArangoResponseMetadata & CollectionProperties & { revision: string }
-  >;
+  count(): Promise<ArangoResponseMetadata & CollectionCountResult>;
+  figures(): Promise<ArangoResponseMetadata & CollectionFiguresResult>;
+  revision(): Promise<ArangoResponseMetadata & CollectionRevisionResult>;
   checksum(
     opts?: CollectionChecksumOptions
-  ): Promise<ArangoResponseMetadata & { revision: string; checksum: string }>;
-  load(
-    count?: boolean
-  ): Promise<ArangoResponseMetadata & CollectionMetadata & { count?: number }>;
+  ): Promise<ArangoResponseMetadata & CollectionChecksumResult>;
+  load(count?: boolean): Promise<ArangoResponseMetadata & CollectionLoadResult>;
   unload(): Promise<ArangoResponseMetadata & CollectionMetadata>;
   rename(
     name: string
-  ): Promise<ArangoResponseMetadata & CollectionMetadata & { name: string }>;
-  rotate(): Promise<ArangoResponseMetadata & { result: boolean }>;
+  ): Promise<ArangoResponseMetadata & CollectionRenameResult>;
+  rotate(): Promise<ArangoResponseMetadata & CollectionRotateResult>;
   truncate(): Promise<ArangoResponseMetadata & CollectionMetadata>;
-  drop(opts?: { isSystem?: boolean }): Promise<ArangoResponseMetadata>;
+  drop(opts?: CollectionDropOptions): Promise<ArangoResponseMetadata>;
 
   //#region crud
   documentExists(selector: Selector): Promise<boolean>;
   document(
     selector: Selector,
-    opts?: ReadDocumentOptions
+    opts?: CollectionReadOptions
   ): Promise<Document<T>>;
-  document(selector: Selector, graceful?: boolean): Promise<Document<T>>;
+  document(selector: Selector, graceful: boolean): Promise<Document<T>>;
   save(
     data: DocumentData<T>,
-    opts?: InsertDocumentOptions
-  ): Promise<DocumentMetadata & { new?: Document<T> }>;
-  save(
+    opts?: CollectionSaveOptions
+  ): Promise<SaveDocumentResult<T>>;
+  saveAll(
     data: Array<DocumentData<T>>,
-    opts?: InsertDocumentOptions
-  ): Promise<(DocumentMetadata & { new?: Document<T> })[]>;
+    opts?: CollectionSaveOptions
+  ): Promise<SaveDocumentResult<T>[]>;
   replace(
     selector: Selector,
     newValue: DocumentData<T>,
-    opts?: ReplaceDocumentOptions
-  ): Promise<DocumentMetadata & { old?: Document<T>; new?: Document<T> }>;
-  replace(
+    opts?: CollectionReplaceOptions
+  ): Promise<ReplaceDocumentResult<T>>;
+  replaceAll(
     newValues: Array<DocumentData<T> & DocumentLike>,
-    opts?: ReplaceDocumentOptions
-  ): Promise<(DocumentMetadata & { old?: Document<T>; new?: Document<T> })[]>;
+    opts?: CollectionReplaceOptions
+  ): Promise<ReplaceDocumentResult<T>[]>;
   update(
     selector: Selector,
     newValue: Patch<DocumentData<T>>,
-    opts?: UpdateDocumentOptions
-  ): Promise<DocumentMetadata & { old?: Document<T>; new?: Document<T> }>;
-  update(
+    opts?: CollectionUpdateOptions
+  ): Promise<UpdateDocumentResult<T>>;
+  updateAll(
     newValues: Array<Patch<DocumentData<T>> & DocumentLike>,
-    opts?: UpdateDocumentOptions
-  ): Promise<(DocumentMetadata & { old?: Document<T>; new?: Document<T> })[]>;
+    opts?: CollectionUpdateOptions
+  ): Promise<UpdateDocumentResult<T>[]>;
   remove(
-    selector: Selector | Array<Selector>,
-    opts?: RemoveDocumentOptions
-  ): Promise<DocumentMetadata>;
+    selector: Selector,
+    opts?: CollectionRemoveOptions
+  ): Promise<RemoveDocumentResult<T>>;
+  removeAll(
+    selector: Array<Selector>,
+    opts?: CollectionRemoveOptions
+  ): Promise<RemoveDocumentResult<T>[]>;
   import(
     data: Buffer | Blob | string,
-    opts?: ImportOptions
-  ): Promise<ImportResult>;
-  import(data: string[][], opts?: ImportOptions): Promise<ImportResult>;
+    opts?: CollectionImportOptions
+  ): Promise<CollectionImportResult>;
+  import(
+    data: string[][],
+    opts?: CollectionImportOptions
+  ): Promise<CollectionImportResult>;
   import(
     data: Array<DocumentData<T>>,
-    opts?: ImportOptions
-  ): Promise<ImportResult>;
+    opts?: CollectionImportOptions
+  ): Promise<CollectionImportResult>;
   //#endregion
 
   //#region simple queries
   /** @deprecated ArangoDB 3.4 */
-  list(type?: SimpleQueryAllKeysType): Promise<ArrayCursor<string>>;
+  list(type?: SimpleQueryAllKeys): Promise<ArrayCursor<string>>;
   /** @deprecated ArangoDB 3.4 */
   all(opts?: SimpleQueryAllOptions): Promise<ArrayCursor<Document<T>>>;
   /** @deprecated ArangoDB 3.4 */
@@ -173,20 +622,20 @@ export interface DocumentCollection<T extends object = any>
   /** @deprecated ArangoDB 3.4 */
   byExample(
     example: Partial<DocumentData<T>>,
-    opts?: SimpleQueryOptions
+    opts?: SimpleQueryByExampleOptions
   ): Promise<ArrayCursor<Document<T>>>;
   /** @deprecated ArangoDB 3.4 */
   firstExample(example: Partial<DocumentData<T>>): Promise<Document<T>>;
   /** @deprecated ArangoDB 3.4 */
   removeByExample(
     example: Partial<DocumentData<T>>,
-    opts?: SimpleQueryRemoveOrReplaceByExampleOptions
+    opts?: SimpleQueryRemoveByExampleOptions
   ): Promise<ArangoResponseMetadata & { deleted: number }>;
   /** @deprecated ArangoDB 3.4 */
   replaceByExample(
     example: Partial<DocumentData<T>>,
     newValue: DocumentData<T>,
-    opts?: SimpleQueryRemoveOrReplaceByExampleOptions
+    opts?: SimpleQueryReplaceByExampleOptions
   ): Promise<ArangoResponseMetadata & { replaced: number }>;
   /** @deprecated ArangoDB 3.4 */
   updateByExample(
@@ -194,6 +643,14 @@ export interface DocumentCollection<T extends object = any>
     newValue: Patch<DocumentData<T>>,
     opts?: SimpleQueryUpdateByExampleOptions
   ): Promise<ArangoResponseMetadata & { updated: number }>;
+  remove(
+    selector: Selector,
+    opts?: CollectionRemoveOptions
+  ): Promise<RemoveEdgeResult<T>>;
+  removeAll(
+    selector: Array<Selector>,
+    opts?: CollectionRemoveOptions
+  ): Promise<RemoveEdgeResult<T>[]>;
   /** @deprecated ArangoDB 3.4 */
   lookupByKeys(keys: string[]): Promise<Document<T>>;
   /** @deprecated ArangoDB 3.4 */
@@ -244,42 +701,48 @@ export interface DocumentCollection<T extends object = any>
 export interface EdgeCollection<T extends object = any>
   extends DocumentCollection<T> {
   //#region crud
-  edge(selector: Selector, opts?: ReadDocumentOptions): Promise<Edge<T>>;
-  edge(selector: Selector, graceful?: boolean): Promise<Edge<T>>;
-  document(selector: Selector, opts?: ReadDocumentOptions): Promise<Edge<T>>;
-  document(selector: Selector, graceful?: boolean): Promise<Edge<T>>;
+  edge(selector: Selector, opts?: CollectionReadOptions): Promise<Edge<T>>;
+  edge(selector: Selector, graceful: boolean): Promise<Edge<T>>;
+  document(selector: Selector, opts?: CollectionReadOptions): Promise<Edge<T>>;
+  document(selector: Selector, graceful: boolean): Promise<Edge<T>>;
   save(
     data: EdgeData<T>,
-    opts?: InsertDocumentOptions
-  ): Promise<DocumentMetadata & { new?: Edge<T> }>;
-  save(
+    opts?: CollectionSaveOptions
+  ): Promise<SaveEdgeResult<T>>;
+  saveAll(
     data: Array<EdgeData<T>>,
-    opts?: InsertDocumentOptions
-  ): Promise<(DocumentMetadata & { new?: Edge<T> })[]>;
+    opts?: CollectionSaveOptions
+  ): Promise<SaveEdgeResult<T>[]>;
   replace(
     selector: Selector,
     newValue: DocumentData<T>,
-    opts?: ReplaceDocumentOptions
-  ): Promise<DocumentMetadata & { old?: Edge<T>; new?: Edge<T> }>;
-  replace(
+    opts?: CollectionReplaceOptions
+  ): Promise<ReplaceEdgeResult<T>>;
+  replaceAll(
     newValues: Array<DocumentData<T> & DocumentLike>,
-    opts?: ReplaceDocumentOptions
-  ): Promise<(DocumentMetadata & { old?: Edge<T>; new?: Edge<T> })[]>;
+    opts?: CollectionReplaceOptions
+  ): Promise<ReplaceEdgeResult<T>[]>;
   update(
     selector: Selector,
     newValue: Patch<DocumentData<T>>,
-    opts?: UpdateDocumentOptions
-  ): Promise<DocumentMetadata & { old?: Edge<T>; new?: Edge<T> }>;
-  update(
+    opts?: CollectionUpdateOptions
+  ): Promise<UpdateEdgeResult<T>>;
+  updateAll(
     newValues: Array<Patch<DocumentData<T>> & DocumentLike>,
-    opts?: UpdateDocumentOptions
-  ): Promise<(DocumentMetadata & { old?: Edge<T>; new?: Edge<T> })[]>;
+    opts?: CollectionUpdateOptions
+  ): Promise<UpdateEdgeResult<T>[]>;
   import(
     data: Buffer | Blob | string,
-    opts?: ImportOptions
-  ): Promise<ImportResult>;
-  import(data: string[][], opts?: ImportOptions): Promise<ImportResult>;
-  import(data: Array<EdgeData<T>>, opts?: ImportOptions): Promise<ImportResult>;
+    opts?: CollectionImportOptions
+  ): Promise<CollectionImportResult>;
+  import(
+    data: string[][],
+    opts?: CollectionImportOptions
+  ): Promise<CollectionImportResult>;
+  import(
+    data: Array<EdgeData<T>>,
+    opts?: CollectionImportOptions
+  ): Promise<CollectionImportResult>;
   //#endregion
 
   //#region simple queries
@@ -290,7 +753,7 @@ export interface EdgeCollection<T extends object = any>
   /** @deprecated ArangoDB 3.4 */
   byExample(
     example: Partial<DocumentData<T>>,
-    opts?: SimpleQueryOptions
+    opts?: SimpleQueryByExampleOptions
   ): Promise<ArrayCursor<Edge<T>>>;
   /** @deprecated ArangoDB 3.4 */
   firstExample(example: Partial<DocumentData<T>>): Promise<Edge<T>>;
@@ -305,15 +768,21 @@ export interface EdgeCollection<T extends object = any>
   //#endregion
 
   //#region edges
-  edges(selector: Selector): Promise<ArangoResponseMetadata & EdgesResult>;
-  inEdges(selector: Selector): Promise<ArangoResponseMetadata & EdgesResult>;
-  outEdges(selector: Selector): Promise<ArangoResponseMetadata & EdgesResult>;
+  edges(
+    selector: Selector
+  ): Promise<ArangoResponseMetadata & CollectionEdgesResult>;
+  inEdges(
+    selector: Selector
+  ): Promise<ArangoResponseMetadata & CollectionEdgesResult>;
+  outEdges(
+    selector: Selector
+  ): Promise<ArangoResponseMetadata & CollectionEdgesResult>;
   /** @deprecated ArangoDB 3.4 */
   traversal(startVertex: Selector, opts?: TraversalOptions): Promise<any>;
   //#endregion
 }
 
-export class Collection<T extends object = any>
+class GenericCollection<T extends object = any>
   implements EdgeCollection<T>, DocumentCollection<T> {
   //#region attributes
   isArangoCollection: true = true;
@@ -403,7 +872,7 @@ export class Collection<T extends object = any>
     );
   }
 
-  create(properties?: CreateCollectionOptions & { type?: CollectionType }) {
+  create(properties?: CollectionCreateOptions) {
     return this._connection.request(
       {
         method: "POST",
@@ -471,7 +940,7 @@ export class Collection<T extends object = any>
     return this._put("truncate");
   }
 
-  drop(opts?: { isSystem?: boolean }) {
+  drop(opts?: CollectionDropOptions) {
     return this._connection.request(
       {
         method: "DELETE",
@@ -501,7 +970,7 @@ export class Collection<T extends object = any>
       });
   }
 
-  document(selector: Selector, opts: boolean | ReadDocumentOptions = {}) {
+  document(selector: Selector, opts: boolean | CollectionReadOptions = {}) {
     if (typeof opts === "boolean") {
       opts = { graceful: opts };
     }
@@ -522,14 +991,23 @@ export class Collection<T extends object = any>
     });
   }
 
-  edge(selector: Selector, opts: boolean | ReadDocumentOptions = {}) {
+  edge(selector: Selector, opts: boolean | CollectionReadOptions = {}) {
     return this.document(selector, opts) as Promise<Edge<T>>;
   }
 
-  save(
-    data: DocumentData<T> | Array<DocumentData<T>>,
-    opts?: InsertDocumentOptions
-  ) {
+  save(data: DocumentData<T>, opts?: CollectionSaveOptions) {
+    return this._connection.request(
+      {
+        method: "POST",
+        path: `/_api/document/${this._name}`,
+        body: data,
+        qs: opts
+      },
+      res => res.body
+    );
+  }
+
+  saveAll(data: Array<DocumentData<T>>, opts?: CollectionSaveOptions) {
     return this._connection.request(
       {
         method: "POST",
@@ -542,25 +1020,30 @@ export class Collection<T extends object = any>
   }
 
   replace(
-    selectorOrNewValues: Selector | Array<DocumentData<T> & DocumentLike>,
-    newValueOrOpts?: DocumentData<T> | ReplaceDocumentOptions,
-    opts?: ReplaceDocumentOptions
+    selector: Selector,
+    newValue: DocumentData<T>,
+    opts?: CollectionReplaceOptions
   ) {
-    let path;
-    let body;
-    if (Array.isArray(selectorOrNewValues)) {
-      path = this._name;
-      body = selectorOrNewValues;
-      opts = newValueOrOpts as UpdateDocumentOptions | undefined;
-    } else {
-      path = documentHandle(selectorOrNewValues, this._name);
-      body = newValueOrOpts as Patch<DocumentData<T>>;
-    }
     return this._connection.request(
       {
         method: "PUT",
-        path: `/_api/${path}`,
-        body,
+        path: `/_api/${documentHandle(selector, this._name)}`,
+        body: newValue,
+        qs: opts
+      },
+      res => res.body
+    );
+  }
+
+  replaceAll(
+    newValues: Array<DocumentData<T> & DocumentLike>,
+    opts?: CollectionReplaceOptions
+  ) {
+    return this._connection.request(
+      {
+        method: "PUT",
+        path: `/_api/${this._name}`,
+        body: newValues,
         qs: opts
       },
       res => res.body
@@ -568,47 +1051,53 @@ export class Collection<T extends object = any>
   }
 
   update(
-    selectorOrNewValues:
-      | Selector
-      | Array<Patch<DocumentData<T>> & DocumentLike>,
-    newValueOrOpts?: Patch<DocumentData<T>> | UpdateDocumentOptions,
-    opts?: UpdateDocumentOptions
+    selector: Selector,
+    newValue: Patch<DocumentData<T>>,
+    opts?: CollectionUpdateOptions
   ) {
-    let path;
-    let body;
-    if (Array.isArray(selectorOrNewValues)) {
-      path = this._name;
-      body = selectorOrNewValues;
-      opts = newValueOrOpts as UpdateDocumentOptions | undefined;
-    } else {
-      path = documentHandle(selectorOrNewValues, this._name);
-      body = newValueOrOpts as Patch<DocumentData<T>>;
-    }
     return this._connection.request(
       {
         method: "PATCH",
-        path: `/_api/document/${path}`,
-        body,
+        path: `/_api/document/${documentHandle(selector, this._name)}`,
+        body: newValue,
         qs: opts
       },
       res => res.body
     );
   }
 
-  remove(selector: Selector | Array<Selector>, opts?: RemoveDocumentOptions) {
-    let path;
-    let body;
-    if (Array.isArray(selector)) {
-      path = this._name;
-      body = selector;
-    } else {
-      path = documentHandle(selector, this._name);
-    }
+  updateAll(
+    newValues: Array<Patch<DocumentData<T>> & DocumentLike>,
+    opts?: CollectionUpdateOptions
+  ) {
+    return this._connection.request(
+      {
+        method: "PATCH",
+        path: `/_api/document/${this._name}`,
+        body: newValues,
+        qs: opts
+      },
+      res => res.body
+    );
+  }
+
+  remove(selector: Selector, opts?: CollectionRemoveOptions) {
     return this._connection.request(
       {
         method: "DELETE",
-        path: `/_api/${path}`,
-        body,
+        path: `/_api/${documentHandle(selector, this._name)}`,
+        qs: opts
+      },
+      res => res.body
+    );
+  }
+
+  removeAll(selectors: Array<Selector>, opts?: CollectionRemoveOptions) {
+    return this._connection.request(
+      {
+        method: "DELETE",
+        path: `/_api/${this._name}`,
+        body: selectors,
         qs: opts
       },
       res => res.body
@@ -617,8 +1106,8 @@ export class Collection<T extends object = any>
 
   import(
     data: Buffer | Blob | string | any[],
-    { type = "auto", ...opts }: ImportOptions = {}
-  ): Promise<ImportResult> {
+    { type = "auto", ...opts }: CollectionImportOptions = {}
+  ): Promise<CollectionImportResult> {
     if (Array.isArray(data)) {
       data =
         (data as any[]).map((line: any) => JSON.stringify(line)).join("\r\n") +
@@ -684,7 +1173,7 @@ export class Collection<T extends object = any>
   //#endregion
 
   //#region simple queries
-  list(type: SimpleQueryAllKeysType = "id") {
+  list(type: SimpleQueryAllKeys = "id") {
     return this._connection.request(
       {
         method: "PUT",
@@ -720,7 +1209,10 @@ export class Collection<T extends object = any>
     );
   }
 
-  byExample(example: Partial<DocumentData<T>>, opts?: SimpleQueryOptions) {
+  byExample(
+    example: Partial<DocumentData<T>>,
+    opts?: SimpleQueryByExampleOptions
+  ) {
     return this._connection.request(
       {
         method: "PUT",
@@ -751,7 +1243,7 @@ export class Collection<T extends object = any>
 
   removeByExample(
     example: Partial<DocumentData<T>>,
-    opts?: SimpleQueryRemoveOrReplaceByExampleOptions
+    opts?: SimpleQueryRemoveByExampleOptions
   ) {
     return this._connection.request(
       {
@@ -770,7 +1262,7 @@ export class Collection<T extends object = any>
   replaceByExample(
     example: Partial<DocumentData<T>>,
     newValue: DocumentData<T>,
-    opts?: SimpleQueryRemoveOrReplaceByExampleOptions
+    opts?: SimpleQueryReplaceByExampleOptions
   ) {
     return this._connection.request(
       {
@@ -988,4 +1480,14 @@ export class Collection<T extends object = any>
     );
   }
   //#endregion
+}
+
+/**
+ * @private
+ */
+export function _constructCollection(
+  connection: Connection,
+  name: string
+): DocumentCollection & EdgeCollection {
+  return new GenericCollection(connection, name);
 }

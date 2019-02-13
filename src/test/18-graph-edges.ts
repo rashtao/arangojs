@@ -1,6 +1,5 @@
 import { expect } from "chai";
-import { Database } from "../arangojs";
-import { Graph } from "../graph";
+import { Database, Graph } from "../arangojs";
 
 describe("Manipulating graph edges", function() {
   // create database takes 11s in a standard cluster

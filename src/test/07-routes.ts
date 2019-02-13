@@ -1,7 +1,5 @@
 import { expect } from "chai";
-import { Database } from "../arangojs";
-import { DocumentCollection } from "../collection";
-import { Route } from "../route";
+import { Database, DocumentCollection, Route } from "../arangojs";
 
 describe("Arbitrary HTTP routes", () => {
   const db = new Database({

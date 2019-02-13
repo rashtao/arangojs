@@ -1,6 +1,5 @@
 import { expect } from "chai";
-import { Database } from "../arangojs";
-import { Collection } from "../collection";
+import { Database, DocumentCollection } from "../arangojs";
 
 const ARANGO_VERSION = Number(process.env.ARANGO_VERSION || 30400);
 const itPre34 = ARANGO_VERSION < 30400 ? it : it.skip;
@@ -11,7 +10,7 @@ describe("Managing indexes", function() {
   this.timeout(20000);
 
   let db: Database;
-  let collection: Collection;
+  let collection: DocumentCollection;
   const dbName = `testdb_${Date.now()}`;
   const collectionName = `collection-${Date.now()}`;
   before(async () => {

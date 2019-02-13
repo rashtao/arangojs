@@ -1,8 +1,11 @@
 import { expect } from "chai";
-import { Database } from "../arangojs";
-import { Collection, DocumentCollection } from "../collection";
-import { ArangoError } from "../error";
-import { Graph, GraphVertexCollection } from "../graph";
+import {
+  ArangoError,
+  Database,
+  DocumentCollection,
+  Graph,
+  GraphVertexCollection
+} from "../arangojs";
 
 const range = (n: number): number[] => Array.from(Array(n).keys());
 
@@ -12,7 +15,7 @@ async function createCollections(db: Database) {
   await Promise.all([
     ...vertexCollectionNames.map(name => db.createCollection(name)),
     ...edgeCollectionNames.map(
-      name => db.createEdgeCollection(name) as Promise<Collection>
+      name => db.createEdgeCollection(name) as Promise<any>
     )
   ]);
   return [vertexCollectionNames, edgeCollectionNames];

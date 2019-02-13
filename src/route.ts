@@ -2,6 +2,7 @@ import { Connection } from "./connection";
 import { ArangojsResponse } from "./util/request";
 
 export type Headers = { [key: string]: string };
+
 export type Params = { [key: string]: string | number | boolean };
 
 export class Route {

@@ -1,9 +1,12 @@
 import { AqlLiteral, AqlQuery, isAqlLiteral, isAqlQuery } from "./aql-query";
 import {
   ArangoCollection,
-  Collection,
+  CollectionType,
+  CreateCollectionOptions,
+  DocumentCollection,
   EdgeCollection,
-  isArangoCollection
+  isArangoCollection,
+  _constructCollection
 } from "./collection";
 import { Config, Connection } from "./connection";
 import { ArrayCursor } from "./cursor";
@@ -11,9 +14,9 @@ import { isArangoError } from "./error";
 import { Graph } from "./graph";
 import { Route } from "./route";
 import { btoa } from "./util/btoa";
+import { DATABASE_NOT_FOUND } from "./util/codes";
 import { toForm } from "./util/multipart";
-import { CollectionType, CreateCollectionOptions } from "./util/types";
-import { ArangoSearchView, ArangoView, constructView, ViewType } from "./view";
+import { ArangoSearchView, ArangoView, ViewType, _constructView } from "./view";
 
 type TODO_any = any;
 
@@ -23,17 +26,8 @@ function colToString(collection: string | ArangoCollection): string {
   } else return String(collection);
 }
 
-type CollectionName = ArangoCollection | string;
-
-export type TransactionCollections =
-  | CollectionName
-  | CollectionName[]
-  | {
-      write?: CollectionName | CollectionName[];
-      read?: CollectionName | CollectionName[];
-    };
-
 export type TransactionOptions = {
+  params?: any;
   lockTimeout?: number;
   maxTransactionSize?: number;
   intermediateCommitCount?: number;
@@ -148,7 +142,6 @@ export interface CreateDatabaseUser {
   extra?: { [key: string]: any };
 }
 
-const DATABASE_NOT_FOUND = 1228;
 export class Database {
   private _connection: Connection;
 
@@ -258,15 +251,17 @@ export class Database {
 
   // Collection manipulation
 
-  collection<T extends object = any>(collectionName: string): Collection<T> {
-    return new Collection<T>(this._connection, collectionName);
+  collection<T extends object = any>(
+    collectionName: string
+  ): DocumentCollection<T> & EdgeCollection<T> {
+    return _constructCollection(this._connection, collectionName);
   }
 
   async createCollection<T extends object = any>(
     collectionName: string,
     properties?: CreateCollectionOptions & { type?: CollectionType }
-  ): Promise<Collection<T>> {
-    const collection = new Collection(this._connection, collectionName);
+  ): Promise<DocumentCollection<T> & EdgeCollection<T>> {
+    const collection = _constructCollection(this._connection, collectionName);
     await collection.create(properties);
     return collection;
   }
@@ -275,7 +270,7 @@ export class Database {
     collectionName: string,
     properties?: CreateCollectionOptions
   ): Promise<EdgeCollection<T>> {
-    const collection = new Collection(this._connection, collectionName);
+    const collection = _constructCollection(this._connection, collectionName);
     await collection.create({
       ...properties,
       type: CollectionType.EDGE_COLLECTION
@@ -293,10 +288,12 @@ export class Database {
     );
   }
 
-  async collections(excludeSystem: boolean = true): Promise<Array<Collection>> {
+  async collections(
+    excludeSystem: boolean = true
+  ): Promise<Array<DocumentCollection | EdgeCollection>> {
     const collections = await this.listCollections(excludeSystem);
-    return collections.map(
-      (data: any) => new Collection(this._connection, data)
+    return collections.map((data: any) =>
+      _constructCollection(this._connection, data)
     );
   }
 
@@ -330,7 +327,7 @@ export class Database {
 
   async views(): Promise<ArangoView[]> {
     const views = await this.listViews();
-    return views.map((data: any) => constructView(this._connection, data));
+    return views.map((data: any) => _constructView(this._connection, data));
   }
 
   // Graph manipulation
@@ -364,9 +361,15 @@ export class Database {
   // Queries
 
   transaction(
-    collections: TransactionCollections,
+    collections:
+      | ArangoCollection
+      | string
+      | (ArangoCollection | string)[]
+      | {
+          write?: ArangoCollection | string | (ArangoCollection | string)[];
+          read?: ArangoCollection | string | (ArangoCollection | string)[];
+        },
     action: string,
-    params?: TODO_any,
     options?: TransactionOptions
   ): Promise<TODO_any> {
     if (typeof collections === "string") {
@@ -395,7 +398,6 @@ export class Database {
         body: {
           collections,
           action,
-          params,
           ...options
         }
       },
@@ -579,7 +581,7 @@ export class Database {
 
   // Service management
 
-  listServices() {
+  listServices(): Promise<TODO_any> {
     return this._connection.request({ path: "/_api/foxx" }, res => res.body);
   }
 
@@ -663,7 +665,7 @@ export class Database {
     );
   }
 
-  getService(mount: string) {
+  getService(mount: string): Promise<TODO_any> {
     return this._connection.request(
       {
         path: "/_api/foxx/service",
@@ -806,6 +808,7 @@ export class Database {
     ) {
       return result;
     }
+    // Work around "minimal" flag not existing in 3.3
     const result2 = await this.getServiceDependencies(mount, minimal);
     if (result.warnings) {
       for (const key of Object.keys(result2)) {
@@ -838,6 +841,7 @@ export class Database {
     ) {
       return result;
     }
+    // Work around "minimal" flag not existing in 3.3
     const result2 = await this.getServiceDependencies(mount, minimal);
     if (result.warnings) {
       for (const key of Object.keys(result2)) {

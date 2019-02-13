@@ -1,6 +1,5 @@
 import { expect } from "chai";
-import { aql, Database } from "../arangojs";
-import { ArrayCursor } from "../cursor";
+import { aql, ArrayCursor, Database, DocumentCollection } from "../arangojs";
 
 const ARANGO_VERSION = Number(process.env.ARANGO_VERSION || 30400);
 const describe34 = ARANGO_VERSION >= 30400 ? describe : describe.skip;
@@ -71,7 +70,7 @@ describe34("AQL Stream queries", function() {
   describe("with some data", () => {
     let cname = "MyTestCollection";
     before(async () => {
-      let collection = db.collection(cname);
+      let collection = db.collection(cname) as DocumentCollection;
       await collection.create();
       await Promise.all(
         Array.from(Array(1000).keys()).map((i: number) =>

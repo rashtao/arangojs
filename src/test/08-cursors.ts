@@ -1,6 +1,5 @@
 import { expect } from "chai";
-import { aql, Database } from "../arangojs";
-import { ArrayCursor } from "../cursor";
+import { aql, ArrayCursor, Database } from "../arangojs";
 
 const aqlQuery = aql`FOR i In 0..10 RETURN i`;
 const aqlResult = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];

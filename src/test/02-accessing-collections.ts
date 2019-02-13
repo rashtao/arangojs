@@ -1,6 +1,5 @@
 import { expect } from "chai";
-import { Database } from "../arangojs";
-import { Collection } from "../collection";
+import { Database, isArangoCollection } from "../arangojs";
 
 const range = (n: number): number[] => Array.from(Array(n).keys());
 
@@ -33,7 +32,7 @@ describe("Accessing collections", function() {
     it("returns a DocumentCollection instance for the collection", () => {
       const name = "potato";
       const collection = db.collection(name);
-      expect(collection).to.be.an.instanceof(Collection);
+      expect(isArangoCollection(collection)).to.equal(true);
       expect(collection)
         .to.have.property("name")
         .that.equals(name);
@@ -45,8 +44,8 @@ describe("Accessing collections", function() {
     before(async () => {
       await Promise.all([
         ...nonSystemCollectionNames.map(name => db.createCollection(name)),
-        ...systemCollectionNames.map(name =>
-          db.collection(name).create({ isSystem: true })
+        ...systemCollectionNames.map(
+          name => db.collection(name).create({ isSystem: true }) as Promise<any>
         )
       ]);
     });
@@ -85,7 +84,7 @@ describe("Accessing collections", function() {
       await Promise.all([
         ...documentCollectionNames.map(name => db.createCollection(name)),
         ...edgeCollectionNames.map(
-          name => db.createEdgeCollection(name) as Promise<Collection>
+          name => db.createEdgeCollection(name) as Promise<any>
         ),
         ...systemCollectionNames.map(name =>
           db.collection(name).create({ isSystem: true })

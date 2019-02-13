@@ -1,6 +1,5 @@
 import { expect } from "chai";
-import { Database } from "../arangojs";
-import { GraphEdgeCollection } from "../graph";
+import { Database, GraphEdgeCollection } from "../arangojs";
 
 describe("GraphEdgeCollection API", function() {
   // create database takes 11s in a standard cluster
@@ -169,7 +168,8 @@ describe("GraphEdgeCollection API", function() {
         _from: "person/Bob",
         _to: "person/Alice"
       };
-      const { new: doc } = await collection.save(data, { returnNew: true });
+      const meta = await collection.save(data, { returnNew: true });
+      const doc = meta.new!;
       await collection.replace(doc, {
         sup: "dawg",
         _from: "person/Bob",
@@ -188,7 +188,8 @@ describe("GraphEdgeCollection API", function() {
         _from: "person/Bob",
         _to: "person/Alice"
       };
-      const { new: doc } = await collection.save(data, { returnNew: true });
+      const meta = await collection.save(data, { returnNew: true });
+      const doc = meta.new!;
       await collection.update(doc, { sup: "dawg", empty: null });
       const newData = await collection.edge(doc._key);
       expect(newData).to.have.property("potato", doc.potato);
@@ -202,7 +203,8 @@ describe("GraphEdgeCollection API", function() {
         _from: "person/Bob",
         _to: "person/Alice"
       };
-      const { new: doc } = await collection.save(data, { returnNew: true });
+      const meta = await collection.save(data, { returnNew: true });
+      const doc = meta.new!;
       await collection.update(
         doc,
         { sup: "dawg", empty: null },

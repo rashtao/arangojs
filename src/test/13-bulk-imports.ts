@@ -1,7 +1,9 @@
 import { expect } from "chai";
-import { Database } from "../arangojs";
-import { Collection } from "../collection";
-import { ImportOptions } from "../util/types";
+import {
+  CollectionImportOptions,
+  Database,
+  DocumentCollection
+} from "../arangojs";
 
 describe("Bulk imports", function() {
   // create database takes 11s in a standard cluster
@@ -9,7 +11,7 @@ describe("Bulk imports", function() {
 
   let db: Database;
   let dbName = `testdb_${Date.now()}`;
-  let collection: Collection<{ data: string }>;
+  let collection: DocumentCollection<{ data: string }>;
   let collectionName = `collection-${Date.now()}`;
   before(async () => {
     db = new Database({
@@ -80,7 +82,7 @@ describe("Bulk imports", function() {
       undefined,
       "auto",
       "documents"
-    ] as ImportOptions["type"][]) {
+    ] as CollectionImportOptions["type"][]) {
       describe(`with type ${JSON.stringify(type)}`, () => {
         it("should accept documents array", async () => {
           const data = [
@@ -130,7 +132,7 @@ describe("Bulk imports", function() {
       undefined,
       "auto",
       "array"
-    ] as ImportOptions["type"][]) {
+    ] as CollectionImportOptions["type"][]) {
       describe(`with type ${JSON.stringify(type)}`, () => {
         it("should accept JSON string", async () => {
           const data = JSON.stringify([

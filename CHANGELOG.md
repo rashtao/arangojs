@@ -36,7 +36,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   generic collection object can still be explicitly cast to
   `DocumentCollection` or `EdgeCollection` for additional stricter type safety.
 
+- Transactions no longer take a positional `params` argument
+
+  The argument can still be specified using the `opts.params` argument.
+
+- Collection `save`, `update`, `replace` and `remove` no longer take arrays
+
+  The array versions have been renamed to `saveAll`, `updateAll`, `replaceAll`
+  and `removeAll` to reduce the likelihood of mistakes and provide more helpful
+  type signatures.
+
 ### Added
+
+- Exported more types and helper functions
 
 - Improved type signatures for TypeScript
 

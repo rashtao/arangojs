@@ -1,6 +1,6 @@
 import { expect } from "chai";
-import { Database } from "../arangojs";
-import { COLLECTION_NOT_FOUND, DocumentCollection } from "../collection";
+import { Database, DocumentCollection } from "../arangojs";
+import { COLLECTION_NOT_FOUND } from "../util/codes";
 
 describe("Collection metadata", function() {
   // create database takes 11s in a standard cluster

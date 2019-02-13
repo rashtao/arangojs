@@ -1,15 +1,30 @@
 import {
   ArangoCollection,
-  Collection,
+  CollectionReadOptions,
+  Document,
   DocumentCollection,
+  DocumentData,
   documentHandle,
-  DOCUMENT_NOT_FOUND,
+  Edge,
   EdgeCollection,
-  isArangoCollection
+  EdgeData,
+  isArangoCollection,
+  RemoveDocumentResult,
+  RemoveEdgeResult,
+  ReplaceDocumentResult,
+  ReplaceEdgeResult,
+  SaveDocumentResult,
+  SaveEdgeResult,
+  Selector,
+  UpdateDocumentResult,
+  UpdateEdgeResult,
+  _constructCollection
 } from "./collection";
 import { Connection } from "./connection";
 import { isArangoError } from "./error";
-import { Document, Edge, ReadDocumentOptions, Selector } from "./util/types";
+import { Headers } from "./route";
+import { DOCUMENT_NOT_FOUND, GRAPH_NOT_FOUND } from "./util/codes";
+import { Patch } from "./util/types";
 
 type TODO_any = any;
 
@@ -26,18 +41,21 @@ export class GraphVertexCollection<T extends object = any>
     this._connection = connection;
     this._name = name;
     this.graph = graph;
-    this.collection = new Collection(connection, name);
+    this.collection = _constructCollection(connection, name);
   }
 
   get name() {
     return this._name;
   }
 
-  vertex(selector: Selector, opts?: ReadDocumentOptions): Promise<Document<T>>;
+  vertex(
+    selector: Selector,
+    opts?: CollectionReadOptions
+  ): Promise<Document<T>>;
   vertex(selector: Selector, graceful: boolean): Promise<Document<T>>;
   vertex(
     selector: Selector,
-    opts?: boolean | ReadDocumentOptions
+    opts?: boolean | CollectionReadOptions
   ): Promise<Document<T>> {
     if (typeof opts === "boolean") {
       opts = { graceful: opts };
@@ -63,9 +81,9 @@ export class GraphVertexCollection<T extends object = any>
   }
 
   save(
-    data: TODO_any,
+    data: DocumentData<T>,
     opts?: { waitForSync?: boolean; returnNew?: boolean }
-  ): Promise<TODO_any> {
+  ): Promise<SaveDocumentResult<T>> {
     return this._connection.request(
       {
         method: "POST",
@@ -77,8 +95,12 @@ export class GraphVertexCollection<T extends object = any>
     );
   }
 
-  replace(selector: Selector, newValue: TODO_any, opts: TODO_any = {}) {
-    const headers: { [key: string]: string } = {};
+  replace(
+    selector: Selector,
+    newValue: DocumentData<T>,
+    opts: TODO_any = {}
+  ): Promise<ReplaceDocumentResult<T>> {
+    const headers: Headers = {};
     if (typeof opts === "string") {
       opts = { rev: opts };
     }
@@ -102,8 +124,12 @@ export class GraphVertexCollection<T extends object = any>
     );
   }
 
-  update(selector: Selector, newValue: TODO_any, opts: TODO_any = {}) {
-    const headers: { [key: string]: string } = {};
+  update(
+    selector: Selector,
+    newValue: Patch<DocumentData<T>>,
+    opts: TODO_any = {}
+  ): Promise<UpdateDocumentResult<T>> {
+    const headers: Headers = {};
     if (typeof opts === "string") {
       opts = { rev: opts };
     }
@@ -127,8 +153,11 @@ export class GraphVertexCollection<T extends object = any>
     );
   }
 
-  remove(selector: Selector, opts: TODO_any = {}) {
-    const headers: { [key: string]: string } = {};
+  remove(
+    selector: Selector,
+    opts: TODO_any = {}
+  ): Promise<RemoveDocumentResult<T>> {
+    const headers: Headers = {};
     if (typeof opts === "string") {
       opts = { rev: opts };
     }
@@ -165,7 +194,7 @@ export class GraphEdgeCollection<T extends object = any>
     this._connection = connection;
     this._name = name;
     this.graph = graph;
-    this.collection = new Collection(connection, name);
+    this.collection = _constructCollection(connection, name);
   }
 
   get name() {
@@ -173,10 +202,10 @@ export class GraphEdgeCollection<T extends object = any>
   }
 
   edge(selector: Selector, graceful: boolean): Promise<Edge<T>>;
-  edge(selector: Selector, opts?: ReadDocumentOptions): Promise<Edge<T>>;
+  edge(selector: Selector, opts?: CollectionReadOptions): Promise<Edge<T>>;
   edge(
     selector: Selector,
-    opts: boolean | ReadDocumentOptions = {}
+    opts: boolean | CollectionReadOptions = {}
   ): Promise<Edge<T>> {
     if (typeof opts === "boolean") {
       opts = { graceful: opts };
@@ -202,9 +231,9 @@ export class GraphEdgeCollection<T extends object = any>
   }
 
   save(
-    data: TODO_any,
+    data: EdgeData<T>,
     opts?: { waitForSync?: boolean; returnNew?: boolean }
-  ): Promise<TODO_any> {
+  ): Promise<SaveEdgeResult<T>> {
     return this._connection.request(
       {
         method: "POST",
@@ -216,8 +245,12 @@ export class GraphEdgeCollection<T extends object = any>
     );
   }
 
-  replace(selector: Selector, newValue: TODO_any, opts: TODO_any = {}) {
-    const headers: { [key: string]: string } = {};
+  replace(
+    selector: Selector,
+    newValue: EdgeData<T>,
+    opts: TODO_any = {}
+  ): Promise<ReplaceEdgeResult<T>> {
+    const headers: Headers = {};
     if (typeof opts === "string") {
       opts = { rev: opts };
     }
@@ -241,8 +274,12 @@ export class GraphEdgeCollection<T extends object = any>
     );
   }
 
-  update(selector: Selector, newValue: TODO_any, opts: TODO_any = {}) {
-    const headers: { [key: string]: string } = {};
+  update(
+    selector: Selector,
+    newValue: Patch<EdgeData<T>>,
+    opts: TODO_any = {}
+  ): Promise<UpdateEdgeResult<T>> {
+    const headers: Headers = {};
     if (typeof opts === "string") {
       opts = { rev: opts };
     }
@@ -266,8 +303,11 @@ export class GraphEdgeCollection<T extends object = any>
     );
   }
 
-  remove(selector: Selector, opts: TODO_any = {}) {
-    const headers: { [key: string]: string } = {};
+  remove(
+    selector: Selector,
+    opts: TODO_any = {}
+  ): Promise<RemoveEdgeResult<T>> {
+    const headers: Headers = {};
     if (typeof opts === "string") {
       opts = { rev: opts };
     }
@@ -291,7 +331,6 @@ export class GraphEdgeCollection<T extends object = any>
   }
 }
 
-export const GRAPH_NOT_FOUND = 1924;
 export class Graph {
   private _name: string;
 
@@ -306,7 +345,7 @@ export class Graph {
     return this._name;
   }
 
-  get() {
+  get(): Promise<TODO_any> {
     return this._connection.request(
       { path: `/_api/gharial/${this._name}` },
       res => res.body.graph
@@ -325,7 +364,10 @@ export class Graph {
     );
   }
 
-  create(properties: TODO_any, opts?: { waitForSync?: boolean }) {
+  create(
+    properties: TODO_any,
+    opts?: { waitForSync?: boolean }
+  ): Promise<TODO_any> {
     return this._connection.request(
       {
         method: "POST",
@@ -340,7 +382,7 @@ export class Graph {
     );
   }
 
-  drop(dropCollections: boolean = false) {
+  drop(dropCollections: boolean = false): Promise<TODO_any> {
     return this._connection.request(
       {
         method: "DELETE",
@@ -351,26 +393,33 @@ export class Graph {
     );
   }
 
-  vertexCollection<T extends object = any>(collectionName: string) {
+  vertexCollection<T extends object = any>(
+    collectionName: string
+  ): GraphVertexCollection<T> {
     return new GraphVertexCollection<T>(this._connection, collectionName, this);
   }
 
-  listVertexCollections(opts?: { excludeOrphans?: boolean }) {
+  listVertexCollections(opts?: {
+    excludeOrphans?: boolean;
+  }): Promise<string[]> {
     return this._connection.request(
       { path: `/_api/gharial/${this._name}/vertex`, qs: opts },
       res => res.body.collections
     );
   }
 
-  async vertexCollections(opts?: { excludeOrphans?: boolean }) {
+  async vertexCollections(opts?: {
+    excludeOrphans?: boolean;
+  }): Promise<GraphVertexCollection[]> {
     const names = await this.listVertexCollections(opts);
     return names.map(
-      (name: TODO_any) =>
-        new GraphVertexCollection(this._connection, name, this)
+      name => new GraphVertexCollection(this._connection, name, this)
     );
   }
 
-  addVertexCollection(collection: string | ArangoCollection) {
+  addVertexCollection(
+    collection: string | ArangoCollection
+  ): Promise<TODO_any> {
     if (isArangoCollection(collection)) {
       collection = collection.name;
     }
@@ -387,7 +436,7 @@ export class Graph {
   removeVertexCollection(
     collection: string | ArangoCollection,
     dropCollection: boolean = false
-  ) {
+  ): Promise<TODO_any> {
     if (isArangoCollection(collection)) {
       collection = collection.name;
     }
@@ -403,25 +452,27 @@ export class Graph {
     );
   }
 
-  edgeCollection<T extends object = any>(collectionName: string) {
+  edgeCollection<T extends object = any>(
+    collectionName: string
+  ): GraphEdgeCollection<T> {
     return new GraphEdgeCollection<T>(this._connection, collectionName, this);
   }
 
-  listEdgeCollections() {
+  listEdgeCollections(): Promise<string[]> {
     return this._connection.request(
       { path: `/_api/gharial/${this._name}/edge` },
       res => res.body.collections
     );
   }
 
-  async edgeCollections() {
+  async edgeCollections(): Promise<GraphEdgeCollection[]> {
     const names = await this.listEdgeCollections();
     return names.map(
-      (name: TODO_any) => new GraphEdgeCollection(this._connection, name, this)
+      name => new GraphEdgeCollection(this._connection, name, this)
     );
   }
 
-  addEdgeDefinition(definition: TODO_any) {
+  addEdgeDefinition(definition: TODO_any): Promise<TODO_any> {
     return this._connection.request(
       {
         method: "POST",
@@ -432,7 +483,10 @@ export class Graph {
     );
   }
 
-  replaceEdgeDefinition(definitionName: string, definition: TODO_any) {
+  replaceEdgeDefinition(
+    definitionName: string,
+    definition: TODO_any
+  ): Promise<TODO_any> {
     return this._connection.request(
       {
         method: "PUT",
@@ -446,7 +500,7 @@ export class Graph {
   removeEdgeDefinition(
     definitionName: string,
     dropCollection: boolean = false
-  ) {
+  ): Promise<TODO_any> {
     return this._connection.request(
       {
         method: "DELETE",
@@ -459,7 +513,7 @@ export class Graph {
     );
   }
 
-  traversal(startVertex: Selector, opts: TODO_any) {
+  traversal(startVertex: Selector, opts?: TODO_any): Promise<TODO_any> {
     return this._connection.request(
       {
         method: "POST",

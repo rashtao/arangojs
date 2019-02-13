@@ -1,6 +1,5 @@
 import { expect } from "chai";
-import { Database } from "../arangojs";
-import { ArangoSearchView } from "../view";
+import { ArangoSearchView, Database } from "../arangojs";
 
 const ARANGO_VERSION = Number(process.env.ARANGO_VERSION || 30400);
 const describe34 = ARANGO_VERSION >= 30400 ? describe : describe.skip;

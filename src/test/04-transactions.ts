@@ -17,7 +17,7 @@ describe("Transactions", () => {
       const result = await db.transaction(
         [],
         "function (params) {return params;}",
-        "test"
+        { params: "test" }
       );
       expect(result).to.equal("test");
     });

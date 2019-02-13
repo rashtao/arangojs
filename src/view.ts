@@ -18,7 +18,7 @@ export interface ArangoViewResponse {
   type: ViewType;
 }
 
-interface ArangoSearchViewCollectionLink {
+export interface ArangoSearchViewCollectionLink {
   analyzers?: string[];
   fields?: { [key: string]: ArangoSearchViewCollectionLink | undefined };
   includeAllFields?: boolean;
@@ -185,7 +185,10 @@ export class ArangoSearchView extends BaseView {
   }
 }
 
-export function constructView(
+/**
+ * @private
+ */
+export function _constructView(
   connection: Connection,
   data: TODO_any
 ): ArangoView {

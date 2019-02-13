@@ -1,6 +1,5 @@
 import { expect } from "chai";
-import { Database } from "../arangojs";
-import { DocumentCollection, EdgeCollection } from "../collection";
+import { Database, DocumentCollection, EdgeCollection } from "../arangojs";
 
 describe("EdgeCollection API", function() {
   // create database takes 11s in a standard cluster
@@ -8,7 +7,11 @@ describe("EdgeCollection API", function() {
 
   const name = `testdb_${Date.now()}`;
   let db: Database;
-  let collection: EdgeCollection<{ sup?: string; empty?: boolean | null }>;
+  let collection: EdgeCollection<{
+    something?: string;
+    more?: string;
+    empty?: boolean | null;
+  }>;
   before(async () => {
     db = new Database({
       url: process.env.TEST_ARANGODB_URL || "http://localhost:8529",
@@ -90,7 +93,7 @@ describe("EdgeCollection API", function() {
   });
   describe("edgeCollection.save", () => {
     it("creates an edge in the collection", async () => {
-      const data = { chicken: "chicken", _from: "d/1", _to: "d/2" };
+      const data = { something: "chicken", _from: "d/1", _to: "d/2" };
       const meta = await collection.save(data);
       expect(meta).to.be.an("object");
       expect(meta)
@@ -104,7 +107,7 @@ describe("EdgeCollection API", function() {
         .that.is.a("string");
       const doc = await collection.edge(meta._id);
       expect(doc).to.have.keys(
-        "chicken",
+        "something",
         "_key",
         "_id",
         "_rev",
@@ -116,11 +119,11 @@ describe("EdgeCollection API", function() {
       expect(doc._rev).to.equal(meta._rev);
       expect(doc._from).to.equal(data._from);
       expect(doc._to).to.equal(data._to);
-      expect(doc.chicken).to.equal(data.chicken);
+      expect(doc.something).to.equal(data.something);
     });
     it("uses the given _key if provided", async () => {
       const data = {
-        chicken: "chicken",
+        something: "chicken",
         _key: "banana",
         _from: "d/1",
         _to: "d/2"
@@ -138,7 +141,7 @@ describe("EdgeCollection API", function() {
         .that.equals(data._key);
       const doc = await collection.edge(meta._id);
       expect(doc).to.have.keys(
-        "chicken",
+        "something",
         "_key",
         "_id",
         "_rev",
@@ -150,10 +153,10 @@ describe("EdgeCollection API", function() {
       expect(doc._key).to.equal(data._key);
       expect(doc._from).to.equal(data._from);
       expect(doc._to).to.equal(data._to);
-      expect(doc.chicken).to.equal(data.chicken);
+      expect(doc.something).to.equal(data.something);
     });
     it("takes an options object", async () => {
-      const data = { chicken: "chicken", _from: "d/1", _to: "d/2" };
+      const data = { something: "chicken", _from: "d/1", _to: "d/2" };
       const meta = await collection.save(data, { returnNew: true });
       expect(meta).to.be.an("object");
       expect(meta)
@@ -168,17 +171,17 @@ describe("EdgeCollection API", function() {
       expect(meta)
         .to.have.property("new")
         .that.is.an("object");
-      expect(meta.new).to.have.property("chicken", data.chicken);
+      expect(meta.new).to.have.property("something", data.something);
       const doc = await collection.edge(meta._id);
       expect(doc).to.have.keys(
-        "chicken",
+        "something",
         "_key",
         "_id",
         "_rev",
         "_from",
         "_to"
       );
-      expect(doc.chicken).to.equal(data.chicken);
+      expect(doc.something).to.equal(data.something);
       expect(doc._id).to.equal(meta._id);
       expect(doc._key).to.equal(meta._key);
       expect(doc._rev).to.equal(meta._rev);
@@ -235,29 +238,29 @@ describe("EdgeCollection API", function() {
       const meta = await collection.save(data, { returnNew: true });
       const doc = meta.new!;
       await collection.replace(doc, {
-        sup: "dawg",
+        something: "peanuts",
         _from: "d/1",
         _to: "d/2"
       });
       const newData = await collection.edge(doc._key);
       expect(newData).not.to.have.property("potato");
-      expect(newData).to.have.property("sup", "dawg");
+      expect(newData).to.have.property("something", "peanuts");
     });
   });
   describe("edgeCollection.update", () => {
     it("updates the given document", async () => {
       const data = {
-        potato: "tomato",
+        something: "tomato",
         empty: false,
         _from: "d/1",
         _to: "d/2"
       };
       const meta = await collection.save(data, { returnNew: true });
       const doc = meta.new!;
-      await collection.update(doc, { sup: "dawg", empty: null });
+      await collection.update(doc, { more: "peanuts", empty: null });
       const newData = await collection.edge(doc._key);
-      expect(newData).to.have.property("potato", doc.potato);
-      expect(newData).to.have.property("sup", "dawg");
+      expect(newData).to.have.property("something", doc.something);
+      expect(newData).to.have.property("more", "peanuts");
       expect(newData).to.have.property("empty", null);
     });
     it("removes null values if keepNull is explicitly set to false", async () => {
@@ -271,12 +274,12 @@ describe("EdgeCollection API", function() {
       const doc = meta.new!;
       await collection.update(
         doc,
-        { sup: "dawg", empty: null },
+        { more: "peanuts", empty: null },
         { keepNull: false }
       );
       const newData = await collection.edge(doc._key);
-      expect(newData).to.have.property("potato", doc.potato);
-      expect(newData).to.have.property("sup", "dawg");
+      expect(newData).to.have.property("something", doc.something);
+      expect(newData).to.have.property("more", "peanuts");
       expect(newData).not.to.have.property("empty");
     });
   });

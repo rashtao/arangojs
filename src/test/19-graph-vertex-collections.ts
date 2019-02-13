@@ -1,6 +1,5 @@
 import { expect } from "chai";
-import { Database } from "../arangojs";
-import { GraphVertexCollection } from "../graph";
+import { Database, GraphVertexCollection } from "../arangojs";
 
 describe("GraphVertexCollection API", function() {
   // create database takes 11s in a standard cluster
@@ -122,7 +121,8 @@ describe("GraphVertexCollection API", function() {
   describe("graphVertexCollection.replace", () => {
     it("replaces the given vertex", async () => {
       const data = { potato: "tomato" };
-      const { new: doc } = await collection.save(data, { returnNew: true });
+      const meta = await collection.save(data, { returnNew: true });
+      const doc = meta.new!;
       await collection.replace(doc, { sup: "dawg" });
       const newData = await collection.vertex(doc._key);
       expect(newData).not.to.have.property("potato");
@@ -134,7 +134,8 @@ describe("GraphVertexCollection API", function() {
   describe("graphVertexCollection.update", () => {
     it("updates the given vertex", async () => {
       const data = { potato: "tomato", empty: false };
-      const { new: doc } = await collection.save(data);
+      const meta = await collection.save(data);
+      const doc = meta.new!;
       await collection.update(doc, { sup: "dawg", empty: null });
       const newData = await collection.vertex(doc._key);
       expect(newData)
@@ -149,7 +150,8 @@ describe("GraphVertexCollection API", function() {
     });
     it("removes null values if keepNull is explicitly set to false", async () => {
       const data = { potato: "tomato", empty: false };
-      const { new: doc } = await collection.save(data, { returnNew: true });
+      const meta = await collection.save(data, { returnNew: true });
+      const doc = meta.new!;
       await collection.update(
         doc,
         { sup: "dawg", empty: null },

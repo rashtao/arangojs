@@ -1,9 +1,7 @@
+import { expect } from "chai";
 import * as fs from "fs";
 import * as path from "path";
-
-import { ArangoError } from "../error";
-import { Database } from "../arangojs";
-import { expect } from "chai";
+import { ArangoError, Database } from "../arangojs";
 import { sanitizeUrl } from "../util/sanitizeUrl";
 
 const ARANGO_VERSION = Number(process.env.ARANGO_VERSION || 30400);

@@ -1,6 +1,5 @@
 import { expect } from "chai";
-import { Database } from "../arangojs";
-import { ArangoError } from "../error";
+import { ArangoError, Database } from "../arangojs";
 
 const range = (n: number): number[] => Array.from(Array(n).keys());
 const ARANGO_VERSION = Number(process.env.ARANGO_VERSION || 30400);

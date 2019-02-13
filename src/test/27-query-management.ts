@@ -1,7 +1,5 @@
 import { expect } from "chai";
-import { aql, Database } from "../arangojs";
-import { ArrayCursor } from "../cursor";
-import { ArangoError } from "../error";
+import { aql, ArangoError, ArrayCursor, Database } from "../arangojs";
 
 describe("Query Management API", function() {
   // create database takes 11s in a standard cluster

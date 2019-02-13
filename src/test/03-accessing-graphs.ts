@@ -1,7 +1,5 @@
 import { expect } from "chai";
-import { Database } from "../arangojs";
-import { Collection } from "../collection";
-import { Graph } from "../graph";
+import { Database, Graph } from "../arangojs";
 
 const range = (n: number): number[] => Array.from(Array(n).keys());
 
@@ -45,7 +43,7 @@ describe("Accessing graphs", function() {
       await Promise.all([
         ...vertexCollectionNames.map(name => db.createCollection(name)),
         ...edgeCollectionNames.map(
-          name => db.createEdgeCollection(name) as Promise<Collection>
+          name => db.createEdgeCollection(name) as Promise<any>
         )
       ]);
       await Promise.all([
@@ -82,7 +80,7 @@ describe("Accessing graphs", function() {
       await Promise.all([
         ...vertexCollectionNames.map(name => db.createCollection(name)),
         ...edgeCollectionNames.map(
-          name => db.createEdgeCollection(name) as Promise<Collection>
+          name => db.createEdgeCollection(name) as Promise<any>
         )
       ]);
       await Promise.all([
