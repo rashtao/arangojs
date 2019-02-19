@@ -95,7 +95,7 @@ export abstract class BaseView implements ArangoView {
     );
   }
 
-  exists() {
+  exists(): Promise<boolean> {
     return this.get().then(
       () => true,
       err => {
@@ -107,7 +107,7 @@ export abstract class BaseView implements ArangoView {
     );
   }
 
-  async rename(name: string) {
+  async rename(name: string): Promise<TODO_any> {
     const result = await this._connection.request(
       {
         method: "PUT",
@@ -120,7 +120,7 @@ export abstract class BaseView implements ArangoView {
     return result;
   }
 
-  drop() {
+  drop(): Promise<TODO_any> {
     return this._connection.request(
       {
         method: "DELETE",
