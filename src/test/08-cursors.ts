@@ -40,6 +40,17 @@ describe("Cursor API", () => {
       expect(val2).to.equal(1);
     });
   });
+  describe("for await of cursor", () => {
+    it("returns each next result of the Cursor", async () => {
+      let i = 0;
+      for await (const value of cursor) {
+        expect(value).to.equal(aqlResult[i]);
+        i += 1;
+      }
+      expect(i).to.equal(aqlResult.length);
+      expect(cursor.hasNext()).to.equal(false);
+    });
+  });
   describe("cursor.hasNext", () => {
     it("returns true if the Cursor has more results", async () => {
       expect(cursor.hasNext()).to.equal(true);

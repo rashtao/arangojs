@@ -47,6 +47,18 @@ export class ArrayCursor {
     }
   }
 
+  [Symbol.asyncIterator]() {
+    return {
+      next: async () => {
+        if (!this._result.length && !this._hasMore) {
+          return { done: true, value: undefined };
+        }
+        const value = await this.next();
+        return { done: false, value };
+      }
+    };
+  }
+
   async all() {
     await this._drain();
     let result = this._result;
