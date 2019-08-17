@@ -161,5 +161,36 @@ describe("Transactions", () => {
       const doc = await collection.document("test");
       expect(doc).to.have.property("_key", "test");
     });
+
+    it("supports concurrent transactions", async () => {
+      const sleep = (millis: number) => new Promise((resolve) => setTimeout(() => resolve(), millis));
+
+      const trx1 = await db.beginTransaction(collection);
+      const trx2 = await db.beginTransaction(collection);
+
+      const [meta1, meta2] = await Promise.all([
+        trx1.run(() => sleep(500).then(() => collection.save({_key: "test1"}))),
+        trx2.run(() => collection.save({_key: "test2"}))
+      ]);
+
+      expect(meta1).to.have.property("_key", "test1");
+      expect(meta2).to.have.property("_key", "test2");
+
+      // OK
+      const doc2InTx2 = await trx2.run(() => collection.documentExists("test2"));
+      expect(doc2InTx2).to.eq(true, "doc2 should exist within tx2");
+
+      // FAIL
+      const doc1InTx1 = await trx1.run(() => collection.documentExists("test1"));
+      expect(doc1InTx1).to.eq(true, "doc1 should exist within tx1");
+
+      // FAIL
+      const doc1OutsideTx1 = await collection.documentExists("test1");
+      expect(doc1OutsideTx1).to.eq(false, "doc1 should not exist outside tx1");
+
+      await trx1.abort();
+      await trx2.abort();
+    });
+
   });
 });
